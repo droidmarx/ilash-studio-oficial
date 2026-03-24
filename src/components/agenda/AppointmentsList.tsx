@@ -5,17 +5,22 @@ import { Client } from "@/lib/api"
 import { format, parseISO, parse, isValid, getMonth } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Clock, Send, Cake, Star, Calendar } from "lucide-react"
+import { Clock, Send, Cake, Star, Calendar, CheckCircle2 } from "lucide-react"
 import { cn, parseBirthday } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ReminderDialog } from "./ReminderDialog"
+import { AppointmentForm } from "./AppointmentForm"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface AppointmentsListProps {
   appointments: Client[]
+  onEdit: (id: string, data: Partial<Client>) => Promise<void>
+  loading?: boolean
 }
 
-export function AppointmentsList({ appointments }: AppointmentsListProps) {
+export function AppointmentsList({ appointments, onEdit, loading }: AppointmentsListProps) {
   const [selectedForReminder, setSelectedForReminder] = useState<Client | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   const getEventDate = (dataStr: string) => {
     try {
@@ -52,8 +57,9 @@ export function AppointmentsList({ appointments }: AppointmentsListProps) {
                 return (
                   <div 
                     key={app.id} 
+                    onClick={() => setEditingClient(app)}
                     className={cn(
-                      "group relative flex items-center gap-4 p-4 rounded-3xl transition-all duration-500 border border-border/50",
+                      "group relative flex items-center gap-4 p-4 rounded-3xl transition-all duration-500 border border-border/50 cursor-pointer hover:shadow-lg",
                       isFirst ? "bg-primary/10 border-primary/30 shadow-[0_0_15px_rgba(var(--primary),0.1)]" : "hover:bg-foreground/5"
                     )}
                   >
@@ -70,6 +76,17 @@ export function AppointmentsList({ appointments }: AppointmentsListProps) {
                         <h4 className="font-bold text-base md:text-lg text-foreground truncate group-hover:text-primary transition-colors">
                           {app.nome}
                         </h4>
+                        {app.confirmado === false ? (
+                          <div className="flex items-center gap-1.5 ml-1">
+                            <div className="w-2 h-2 rounded-full bg-primary animate-instagram-pulse shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
+                            <span className="text-[10px] font-black text-primary uppercase tracking-tighter">Pendente</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 ml-1">
+                            <CheckCircle2 size={12} className="text-green-500" />
+                            <span className="text-[10px] font-black text-green-500 uppercase tracking-tighter">Confirmado</span>
+                          </div>
+                        )}
                         {isBday && (
                           <Cake size={14} className="text-primary animate-pulse shrink-0" />
                         )}
@@ -107,8 +124,11 @@ export function AppointmentsList({ appointments }: AppointmentsListProps) {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-10 w-10 rounded-full text-primary hover:bg-primary/10 transition-colors"
-                          onClick={() => setSelectedForReminder(app)}
+                          className="h-10 w-10 rounded-full text-primary hover:bg-primary/10 transition-colors z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedForReminder(app);
+                          }}
                           title="Enviar Lembrete"
                         >
                           <Send size={18} />
@@ -133,6 +153,27 @@ export function AppointmentsList({ appointments }: AppointmentsListProps) {
         isOpen={!!selectedForReminder}
         onClose={() => setSelectedForReminder(null)}
       />
+
+      <Dialog open={!!editingClient} onOpenChange={(open) => { if (!open) { setEditingClient(null); } }}>
+        <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem] bg-background border-border p-4 md:p-8 max-h-[95vh] overflow-y-auto text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-3xl md:text-4xl font-headline text-gold-gradient">Editar Agendamento</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 md:mt-6">
+            {editingClient && (
+              <AppointmentForm 
+                initialData={editingClient} 
+                loading={loading}
+                onSubmit={async (data) => {
+                  await onEdit(editingClient.id, data)
+                  setEditingClient(null)
+                }} 
+                onCancel={() => setEditingClient(null)} 
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

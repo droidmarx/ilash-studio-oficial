@@ -78,8 +78,8 @@ export function CalendarDay({ day, events, birthdays, isCurrentMonth, onClick }:
               let dotClass = "";
 
               if (isPending) {
-                // Estilo para agendamentos pendentes: tracejado e vazado
-                dotClass = "bg-transparent border-2 border-primary/40 border-dashed shadow-none";
+                // Estilo para agendamentos pendentes: piscante como na aba de pendentes
+                dotClass = "bg-primary animate-instagram-pulse shadow-[0_0_8px_rgba(var(--primary),0.6)] border-none";
               } else {
                 // Estilos para agendamentos confirmados (originais)
                 if (e.tipo === 'Aplicação') dotClass = "bg-primary border-4 border-white shadow-[0_0_12px_rgba(255,255,255,0.9)] scale-125 z-10";

@@ -55,6 +55,102 @@
     --gold-grad: linear-gradient(to right, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
     --sparkle-opacity: 0.8;
   }
+
+  .ocean {
+    --background: 220 40% 10%;
+    --foreground: 0 0% 98%;
+    --card: 220 40% 15%;
+    --card-foreground: 0 0% 98%;
+    --popover: 220 40% 15%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 200 100% 70%;
+    --primary-foreground: 220 40% 10%;
+    --secondary: 220 40% 20%;
+    --secondary-foreground: 200 100% 70%;
+    --muted: 220 40% 20%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 200 100% 80%;
+    --accent-foreground: 220 40% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 40% 25%;
+    --input: 220 40% 25%;
+    --ring: 200 100% 70%;
+    --gold-grad: linear-gradient(to right, #8E9EAB, #EEF2F3, #a1aeb8, #d3d8db);
+    --sparkle-opacity: 0.8;
+  }
+
+  .emerald {
+    --background: 160 50% 8%;
+    --foreground: 0 0% 98%;
+    --card: 160 50% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 160 50% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 45 100% 50%;
+    --primary-foreground: 160 50% 8%;
+    --secondary: 160 50% 18%;
+    --secondary-foreground: 45 100% 50%;
+    --muted: 160 50% 18%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 45 100% 60%;
+    --accent-foreground: 160 50% 8%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 160 50% 20%;
+    --input: 160 50% 20%;
+    --ring: 45 100% 50%;
+    --gold-grad: linear-gradient(to right, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+    --sparkle-opacity: 0.8;
+  }
+
+  .amethyst {
+    --background: 280 40% 10%;
+    --foreground: 0 0% 98%;
+    --card: 280 40% 15%;
+    --card-foreground: 0 0% 98%;
+    --popover: 280 40% 15%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 340 70% 70%;
+    --primary-foreground: 280 40% 10%;
+    --secondary: 280 40% 20%;
+    --secondary-foreground: 340 70% 70%;
+    --muted: 280 40% 20%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 340 70% 80%;
+    --accent-foreground: 280 40% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 280 40% 25%;
+    --input: 280 40% 25%;
+    --ring: 340 70% 70%;
+    --gold-grad: linear-gradient(to right, #b76e79, #f2bdcd, #e29a86, #f7c5b6);
+    --sparkle-opacity: 0.8;
+  }
+
+  .ruby {
+    --background: 350 50% 10%;
+    --foreground: 0 0% 98%;
+    --card: 350 50% 15%;
+    --card-foreground: 0 0% 98%;
+    --popover: 350 50% 15%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 40 90% 60%;
+    --primary-foreground: 350 50% 10%;
+    --secondary: 350 50% 20%;
+    --secondary-foreground: 40 90% 60%;
+    --muted: 350 50% 20%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 40 90% 70%;
+    --accent-foreground: 350 50% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 350 50% 25%;
+    --input: 350 50% 25%;
+    --ring: 40 90% 60%;
+    --gold-grad: linear-gradient(to right, #cfb53b, #f3e5ab, #d4af37, #fdf5e6, #c5a059);
+    --sparkle-opacity: 0.8;
+  }
 }
 
 @layer components {
@@ -147,10 +243,13 @@
     animation: shooting-star-anim 20s infinite ease-in;
   }
 
-  .dark .shooting-star {
+  .dark .shooting-star, .emerald .shooting-star {
     background: linear-gradient(to right, transparent, #BF953F);
     box-shadow: 0 0 20px #B38728;
   }
+  .ocean .shooting-star { background: linear-gradient(to right, transparent, #8E9EAB); box-shadow: 0 0 20px #8E9EAB; }
+  .amethyst .shooting-star { background: linear-gradient(to right, transparent, #b76e79); box-shadow: 0 0 20px #b76e79; }
+  .ruby .shooting-star { background: linear-gradient(to right, transparent, #cfb53b); box-shadow: 0 0 20px #c5a059; }
 
   /* Animações de Entrada (Splash) */
   @keyframes luxury-zoom {

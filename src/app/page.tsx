@@ -79,7 +79,7 @@ export default function AgendaPage() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [prefilledDate, setPrefilledDate] = useState<string | undefined>(undefined)
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark')
+  const [theme, setTheme] = useState<string>('dark')
   const [showSplash, setShowSplash] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -92,12 +92,13 @@ export default function AgendaPage() {
     }
     setIsAuthorized(true)
 
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark'
-    if (savedTheme) {
-      setTheme(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
-    } else {
-      document.documentElement.classList.add('dark')
+    const savedTheme = localStorage.getItem('theme') || 'dark'
+    setTheme(savedTheme)
+    
+    const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby']
+    document.documentElement.classList.remove(...allThemes)
+    if (savedTheme !== 'light') {
+      document.documentElement.classList.add(savedTheme)
     }
 
     const timer = setTimeout(() => {
@@ -106,11 +107,15 @@ export default function AgendaPage() {
     return () => clearTimeout(timer)
   }, [router])
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
+  const toggleTheme = (newTheme: string) => {
     setTheme(newTheme)
     localStorage.setItem('theme', newTheme)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark')
+    
+    const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby']
+    document.documentElement.classList.remove(...allThemes)
+    if (newTheme !== 'light') {
+      document.documentElement.classList.add(newTheme)
+    }
   }
 
   const handleLogout = () => {
@@ -268,16 +273,6 @@ export default function AgendaPage() {
                 <Crown size={12} /> Gestão Studio
               </p>
             </div>
-            
-            <DropdownMenuItem 
-              onClick={() => handleOpenAddModal()}
-              className="rounded-2xl gap-3 py-4 focus:bg-primary/10 focus:text-primary cursor-pointer transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Plus size={18} className="text-primary" />
-              </div>
-              <span className="font-bold text-sm">Novo Agendamento</span>
-            </DropdownMenuItem>
 
             <DropdownMenuItem 
               onClick={() => setIsSettingsOpen(true)}
@@ -407,7 +402,11 @@ export default function AgendaPage() {
                   </Card>
                 </div>
                 <div className="lg:col-span-1">
-                  <AppointmentsList appointments={upcomingAppointments} />
+                  <AppointmentsList 
+                    appointments={upcomingAppointments} 
+                    onEdit={editAppointment}
+                    loading={loading}
+                  />
                 </div>
               </div>
             </TabsContent>

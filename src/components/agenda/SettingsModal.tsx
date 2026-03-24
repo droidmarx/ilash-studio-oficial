@@ -22,8 +22,8 @@ interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: () => void
-  theme: 'light' | 'dark'
-  toggleTheme: () => void
+  theme: string
+  toggleTheme: (theme: string) => void
 }
 
 export function SettingsModal({ 

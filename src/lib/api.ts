@@ -1,5 +1,7 @@
-export const DEFAULT_API_URL = 'https://6987bee8780e8375a686ec39.mockapi.io/Clientes/Clientes';
-export const SETTINGS_API_URL = 'https://6987bee8780e8375a686ec39.mockapi.io/Clientes/config';
+import { supabase } from './supabase';
+
+export const DEFAULT_API_URL = '';
+export const SETTINGS_API_URL = '';
 
 export interface ServicoAdicional {
   nome: string;
@@ -98,266 +100,247 @@ export interface Client {
   reminderSent?: boolean;
 }
 
-/**
- * Retorna a URL da API. No servidor, tenta buscar a URL salva na config.
- */
-export async function getEffectiveApiUrl(): Promise<string> {
-  // No cliente, usa o localStorage
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('mock_api_url') || DEFAULT_API_URL;
-  }
-  
-  // No servidor, tenta descobrir a URL salva na config global
-  try {
-    const recipients = await getRecipients();
-    const config = recipients.find(r => r.nome === 'MAIN_API_URL');
-    return config ? config.chatID : DEFAULT_API_URL;
-  } catch {
-    return DEFAULT_API_URL;
-  }
-}
-
-function getSettingsUrl(): string {
-  // A URL de config sempre aponta para o projeto raiz configurado no código
-  // para que o servidor saiba onde encontrar as chaves iniciais.
-  return SETTINGS_API_URL;
-}
-
 export async function getRecipients(): Promise<Recipient[]> {
-  try {
-    const res = await fetch(getSettingsUrl(), { cache: 'no-store' });
-    if (!res.ok) return [];
-    return await res.json();
-  } catch (error) {
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('*');
+  
+  if (error) {
+    console.error('Erro ao buscar configurações:', error);
     return [];
   }
+  
+  return data.map((item: any) => ({
+    id: item.id,
+    nome: item.nome,
+    chatID: item.valor
+  }));
 }
 
 export async function getTelegramToken(): Promise<string | null> {
-  try {
-    const recipients = await getRecipients();
-    const config = recipients.find(r => r.nome === 'SYSTEM_TOKEN');
-    return config ? config.chatID : null;
-  } catch (error) {
-    return null;
-  }
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('valor')
+    .eq('nome', 'SYSTEM_TOKEN')
+    .maybeSingle();
+  
+  if (error || !data) return null;
+  return data.valor;
 }
 
 export async function updateTelegramToken(token: string): Promise<void> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'SYSTEM_TOKEN');
-  
-  if (config) {
-    await updateRecipient({ ...config, chatID: token });
-  } else {
-    await createRecipient({ nome: 'SYSTEM_TOKEN', chatID: token });
-  }
+  await supabase
+    .from('configuracoes')
+    .upsert({ nome: 'SYSTEM_TOKEN', valor: token }, { onConflict: 'nome' });
 }
 
 export async function updateMainApiUrl(url: string): Promise<void> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'MAIN_API_URL');
-  
-  if (config) {
-    await updateRecipient({ ...config, chatID: url });
-  } else {
-    await createRecipient({ nome: 'MAIN_API_URL', chatID: url });
-  }
+  await supabase
+    .from('configuracoes')
+    .upsert({ nome: 'MAIN_API_URL', valor: url }, { onConflict: 'nome' });
 }
 
 export async function getWebhookStatus(): Promise<boolean> {
-  try {
-    const recipients = await getRecipients();
-    const config = recipients.find(r => r.nome === 'WEBHOOK_STATE');
-    return config ? config.chatID === 'ACTIVE' : false;
-  } catch {
-    return false;
-  }
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('valor')
+    .eq('nome', 'WEBHOOK_STATE')
+    .maybeSingle();
+  
+  if (error || !data) return false;
+  return data.valor === 'ACTIVE';
 }
 
 export async function updateWebhookStatus(active: boolean): Promise<void> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'WEBHOOK_STATE');
   const value = active ? 'ACTIVE' : 'INACTIVE';
-  
-  if (config) {
-    await updateRecipient({ ...config, chatID: value });
-  } else {
-    await createRecipient({ nome: 'WEBHOOK_STATE', chatID: value });
-  }
+  await supabase
+    .from('configuracoes')
+    .upsert({ nome: 'WEBHOOK_STATE', valor: value }, { onConflict: 'nome' });
 }
 
 export async function getWorkingHours(): Promise<WorkingHours> {
   try {
-    const recipients = await getRecipients();
-    const config = recipients.find(r => r.nome === 'WORKING_HOURS');
-    return config ? JSON.parse(config.chatID) : defaultWorkingHours;
+    const { data, error } = await supabase
+      .from('configuracoes')
+      .select('valor')
+      .eq('nome', 'WORKING_HOURS')
+      .maybeSingle();
+    
+    if (error || !data) return defaultWorkingHours;
+    return JSON.parse(data.valor);
   } catch {
     return defaultWorkingHours;
   }
 }
 
 export async function updateWorkingHours(hours: WorkingHours): Promise<void> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'WORKING_HOURS');
   const value = JSON.stringify(hours);
-  if (config) {
-    await updateRecipient({ ...config, chatID: value });
-  } else {
-    await createRecipient({ nome: 'WORKING_HOURS', chatID: value });
-  }
+  await supabase
+    .from('configuracoes')
+    .upsert({ nome: 'WORKING_HOURS', valor: value }, { onConflict: 'nome' });
 }
 
 export async function getVacationMode(): Promise<VacationMode> {
   try {
-    const recipients = await getRecipients();
-    const config = recipients.find(r => r.nome === 'VACATION_MODE');
-    return config ? JSON.parse(config.chatID) : defaultVacationMode;
+    const { data, error } = await supabase
+      .from('configuracoes')
+      .select('valor')
+      .eq('nome', 'VACATION_MODE')
+      .maybeSingle();
+    
+    if (error || !data) return defaultVacationMode;
+    return JSON.parse(data.valor);
   } catch {
     return defaultVacationMode;
   }
 }
 
 export async function updateVacationMode(mode: VacationMode): Promise<void> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'VACATION_MODE');
   const value = JSON.stringify(mode);
-  if (config) {
-    await updateRecipient({ ...config, chatID: value });
-  } else {
-    await createRecipient({ nome: 'VACATION_MODE', chatID: value });
-  }
+  await supabase
+    .from('configuracoes')
+    .upsert({ nome: 'VACATION_MODE', valor: value }, { onConflict: 'nome' });
 }
 
 export async function getTelegramConfig(): Promise<TelegramSettings> {
   try {
-    const recipients = await getRecipients();
-    const config = recipients.find(r => r.nome === 'TELEGRAM_CONFIG');
-    return config ? JSON.parse(config.chatID) : defaultTelegramSettings;
+    const { data, error } = await supabase
+      .from('configuracoes')
+      .select('valor')
+      .eq('nome', 'TELEGRAM_CONFIG')
+      .maybeSingle();
+    
+    if (error || !data) return defaultTelegramSettings;
+    return JSON.parse(data.valor);
   } catch {
     return defaultTelegramSettings;
   }
 }
 
 export async function updateTelegramConfig(settings: TelegramSettings): Promise<void> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'TELEGRAM_CONFIG');
   const value = JSON.stringify(settings);
-  if (config) {
-    await updateRecipient({ ...config, chatID: value });
-  } else {
-    await createRecipient({ nome: 'TELEGRAM_CONFIG', chatID: value });
-  }
+  await supabase
+    .from('configuracoes')
+    .upsert({ nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'nome' });
 }
 
 export async function getTechniques(): Promise<string[]> {
   try {
-    const recipients = await getRecipients();
-    const config = recipients.find(r => r.nome === 'TECHNIQUES');
-    return config ? JSON.parse(config.chatID) : defaultTechniques;
+    const { data, error } = await supabase
+      .from('configuracoes')
+      .select('valor')
+      .eq('nome', 'TECHNIQUES')
+      .maybeSingle();
+    
+    if (error || !data) return defaultTechniques;
+    return JSON.parse(data.valor);
   } catch {
     return defaultTechniques;
   }
 }
 
 export async function updateTechniques(techniques: string[]): Promise<void> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'TECHNIQUES');
   const value = JSON.stringify(techniques);
-  if (config) {
-    await updateRecipient({ ...config, chatID: value });
-  } else {
-    await createRecipient({ nome: 'TECHNIQUES', chatID: value });
-  }
+  await supabase
+    .from('configuracoes')
+    .upsert({ nome: 'TECHNIQUES', valor: value }, { onConflict: 'nome' });
 }
 
 export async function updateRecipient(recipient: Recipient): Promise<void> {
-  const url = `${getSettingsUrl()}/${recipient.id}`;
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nome: recipient.nome, chatID: recipient.chatID }),
-  });
-  if (!res.ok) throw new Error('Falha ao atualizar destinatário');
+  const { error } = await supabase
+    .from('configuracoes')
+    .update({ nome: recipient.nome, valor: recipient.chatID })
+    .eq('id', recipient.id);
+  
+  if (error) throw error;
 }
 
 export async function createRecipient(recipient: Omit<Recipient, 'id'>): Promise<void> {
-  const res = await fetch(getSettingsUrl(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(recipient),
-  });
-  if (!res.ok) throw new Error('Falha ao criar destinatário');
+  const { error } = await supabase
+    .from('configuracoes')
+    .insert({ nome: recipient.nome, valor: recipient.chatID });
+  
+  if (error) throw error;
 }
 
 export async function deleteRecipient(id: string): Promise<void> {
-  const res = await fetch(`${getSettingsUrl()}/${id}`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) throw new Error('Falha ao excluir destinatário');
+  const { error } = await supabase
+    .from('configuracoes')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
 }
 
 export async function getClients(): Promise<Client[]> {
-  try {
-    const apiUrl = await getEffectiveApiUrl();
-    const res = await fetch(apiUrl, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Falha ao buscar dados');
-    return await res.json();
-  } catch (error) {
+  const { data, error } = await supabase
+    .from('agendamentos')
+    .select('*')
+    .order('data', { ascending: true });
+  
+  if (error) {
+    console.error('Erro ao buscar clientes:', error);
     return [];
   }
+  
+  return data.map(mapToClient);
 }
 
 export async function getClient(id: string): Promise<Client> {
-  const apiUrl = await getEffectiveApiUrl();
-  const res = await fetch(`${apiUrl}/${id}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Falha ao buscar cliente');
-  return await res.json();
+  const { data, error } = await supabase
+    .from('agendamentos')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (error) throw error;
+  return mapToClient(data);
 }
 
 export async function createClient(data: Omit<Client, 'id'>): Promise<Client> {
-  const apiUrl = await getEffectiveApiUrl();
-  const res = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Falha ao criar agendamento');
-  return await res.json();
+  const { data: inserted, error } = await supabase
+    .from('agendamentos')
+    .insert(mapToDb(data))
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return mapToClient(inserted);
 }
 
 export async function updateClient(id: string, data: Partial<Client>): Promise<void> {
-  const apiUrl = await getEffectiveApiUrl();
-  const res = await fetch(`${apiUrl}/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) throw new Error('Falha ao atualizar agendamento');
+  const { error } = await supabase
+    .from('agendamentos')
+    .update(mapToDb(data))
+    .eq('id', id);
+  
+  if (error) throw error;
 }
 
 export async function deleteClient(id: string): Promise<void> {
-  const apiUrl = await getEffectiveApiUrl();
-  const res = await fetch(`${apiUrl}/${id}`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) throw new Error('Falha ao excluir agendamento');
+  const { error } = await supabase
+    .from('agendamentos')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
 }
 
 export async function getLastSummaryDate(): Promise<string | null> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'SUMMARY_STATE');
-  return config ? config.chatID : null;
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('valor')
+    .eq('nome', 'SUMMARY_STATE')
+    .maybeSingle();
+  
+  if (error || !data) return null;
+  return data.valor;
 }
 
 export async function updateLastSummaryDate(dateStr: string): Promise<void> {
-  const recipients = await getRecipients();
-  const config = recipients.find(r => r.nome === 'SUMMARY_STATE');
-  if (config) {
-    await updateRecipient({ ...config, chatID: dateStr });
-  } else {
-    await createRecipient({ nome: 'SUMMARY_STATE', chatID: dateStr });
-  }
+  await supabase
+    .from('configuracoes')
+    .upsert({ nome: 'SUMMARY_STATE', valor: dateStr }, { onConflict: 'nome' });
 }
 
 export async function setTelegramWebhook(token: string, url: string): Promise<boolean> {
@@ -369,10 +352,54 @@ export async function setTelegramWebhook(token: string, url: string): Promise<bo
       body: JSON.stringify({ url: finalUrl }),
     });
     const result = await response.json();
-    console.log('[Webhook Registration]', result);
     return result.ok;
   } catch (error) {
     console.error('[Webhook Error]', error);
     return false;
   }
+}
+
+function mapToClient(db: any): Client {
+  return {
+    id: db.id,
+    nome: db.nome,
+    data: db.data,
+    servico: db.servico,
+    tipo: db.tipo,
+    valor: db.valor,
+    valorAplicacao: db.valor_aplicacao,
+    valorManutencao: db.valor_manutencao,
+    valorRemocao: db.valor_remocao,
+    whatsapp: db.whatsapp,
+    observacoes: db.observacoes,
+    aniversario: db.aniversario,
+    isUnifiedValue: db.is_unified_value,
+    unifiedValue: db.unified_value,
+    confirmado: db.confirmado,
+    reminderSent: db.reminder_sent,
+    anamnese: db.anamnese,
+    servicosAdicionais: db.servicos_adicionais
+  };
+}
+
+function mapToDb(client: any): any {
+  const db: any = {};
+  if (client.nome !== undefined) db.nome = client.nome;
+  if (client.data !== undefined) db.data = client.data;
+  if (client.servico !== undefined) db.servico = client.servico;
+  if (client.tipo !== undefined) db.tipo = client.tipo;
+  if (client.valor !== undefined) db.valor = client.valor;
+  if (client.valorAplicacao !== undefined) db.valor_aplicacao = client.valorAplicacao;
+  if (client.valorManutencao !== undefined) db.valor_manutencao = client.valorManutencao;
+  if (client.valorRemocao !== undefined) db.valor_remocao = client.valorRemocao;
+  if (client.whatsapp !== undefined) db.whatsapp = client.whatsapp;
+  if (client.observacoes !== undefined) db.observacoes = client.observacoes;
+  if (client.aniversario !== undefined) db.aniversario = client.aniversario;
+  if (client.isUnifiedValue !== undefined) db.is_unified_value = client.isUnifiedValue;
+  if (client.unifiedValue !== undefined) db.unified_value = client.unifiedValue;
+  if (client.confirmado !== undefined) db.confirmado = client.confirmado;
+  if (client.reminderSent !== undefined) db.reminder_sent = client.reminderSent;
+  if (client.anamnese !== undefined) db.anamnese = client.anamnese;
+  if (client.servicosAdicionais !== undefined) db.servicos_adicionais = client.servicosAdicionais;
+  return db;
 }

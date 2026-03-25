@@ -21,7 +21,7 @@ import {
   Recipient, getRecipients, createRecipient, updateRecipient, deleteRecipient, 
   updateTelegramToken, setTelegramWebhook, updateMainApiUrl, DEFAULT_API_URL, 
   getWebhookStatus, updateWebhookStatus,
-  getWorkingHours, updateWorkingHours, WorkingHours, defaultWorkingHours,
+  getWorkingHours, updateWorkingHours, WorkingHours, WorkingDay, defaultWorkingHours,
   getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,
   getTelegramConfig, updateTelegramConfig, TelegramSettings, defaultTelegramSettings,
   getTechniques, updateTechniques, defaultTechniques

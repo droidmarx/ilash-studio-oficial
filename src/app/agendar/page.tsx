@@ -63,7 +63,7 @@ export default function ClientBookingPage() {
       problemaOcular: false,
       tratamentoOncologico: false,
       gestanteLactante: false,
-      dormeDeLado: 'Não',
+      dormeDeLado: 'Não' as 'Não' | 'Sim, Lado Direito' | 'Sim, Lado Esquerdo' | 'Sim, Ambos os lados',
       observacoesGerais: "",
       autorizaImagem: true,
       assinatura: ""

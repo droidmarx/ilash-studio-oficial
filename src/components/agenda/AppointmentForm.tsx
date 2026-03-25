@@ -1,11 +1,16 @@
-
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { Client, getTechniques } from "@/lib/api"
+import {
+  Client,
+  getWorkingHours, updateWorkingHours, WorkingHours, WorkingDay, defaultWorkingHours,
+  getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,
+  getTelegramConfig, updateTelegramConfig, TelegramSettings, defaultTelegramSettings,
+  getTechniques, updateTechniques, defaultTechniques
+} from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -202,21 +207,22 @@ export function AppointmentForm({ initialData, clients = [], prefilledDate, load
   const handleFormSubmit = async (values: z.infer<typeof formSchema>) => {
     const { date, time, servicosAdicionais, ...rest } = values;
     
-    let selectedAdicionais = (servicosAdicionais || []).filter(a => a.selected);
+    const selectedAdicionais = (servicosAdicionais || []).filter(a => a.selected);
+    let mappedAdicionais: any[] = [];
 
     if (values.isUnifiedValue && selectedAdicionais.length > 0) {
-      selectedAdicionais = selectedAdicionais.map((a, i) => ({
+      mappedAdicionais = selectedAdicionais.map((a, i) => ({
         nome: a.nome,
         valor: i === 0 ? (values.unifiedValue || "0,00") : "0,00"
       }));
     } else {
-      selectedAdicionais = selectedAdicionais.map(a => ({ nome: a.nome, valor: a.valor }));
+      mappedAdicionais = selectedAdicionais.map(a => ({ nome: a.nome, valor: a.valor }));
     }
 
     const payload: any = { 
       ...rest, 
       data: `${date}T${time}`,
-      servicosAdicionais: selectedAdicionais
+      servicosAdicionais: mappedAdicionais
     };
 
     if (initialData?.anamnese) {

@@ -131,19 +131,8 @@ export async function getRecipients(userId?: string): Promise<Recipient[]> {
 }
 
 export async function getTelegramToken(userId?: string): Promise<string | null> {
-  let query = supabase
-    .from('configuracoes')
-    .select('valor')
-    .eq('nome', 'SYSTEM_TOKEN');
-  
-  if (userId) {
-    query = query.eq('user_id', userId);
-  }
-
-  const { data, error } = await query.maybeSingle();
-  
-  if (error || !data) return null;
-  return data.valor;
+  // O token agora é global e deve ser definido no ambiente
+  return process.env.TELEGRAM_BOT_TOKEN || process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN || null;
 }
 
 export async function uploadLogo(file: File): Promise<string> {
@@ -168,11 +157,8 @@ export async function uploadLogo(file: File): Promise<string> {
 }
 
 export async function updateTelegramToken(token: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase
-    .from('configuracoes')
-    .upsert({ user_id: user.id, nome: 'SYSTEM_TOKEN', valor: token }, { onConflict: 'user_id, nome' });
+  // Função desativada: o token agora é global e gerenciado via variáveis de ambiente
+  console.warn('updateTelegramToken chamada, mas a funcionalidade foi desativada.');
 }
 
 export async function getWebhookStatus(): Promise<boolean> {
@@ -555,7 +541,9 @@ export async function updateLastSummaryDate(dateStr: string): Promise<void> {
 export async function setTelegramWebhook(token: string, url: string): Promise<boolean> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    const webhookUrl = url ? `${url}/api/telegram/webhook?userId=${user?.id}` : "";
+    // Webhook global, opcionalmente passamos o userId para facilitar logs, 
+    // mas a identificação principal será pelo chat_id no corpo da mensagem.
+    const webhookUrl = url ? `${url}/api/telegram/webhook` : "";
     
     const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
       method: 'POST',

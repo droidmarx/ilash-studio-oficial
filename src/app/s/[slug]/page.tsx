@@ -98,13 +98,16 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
   }, [slug])
 
   useEffect(() => {
-    if (!perfil) return
+    const p = perfil
+    if (!p) return
     async function fetchConfig() {
+      if (!p) return
       try {
+        const profileId = p.id;
         const [wh, vm, tks] = await Promise.all([
-          getWorkingHours(perfil.id),
-          getVacationMode(perfil.id),
-          getTechniques(perfil.id)
+          getWorkingHours(profileId),
+          getVacationMode(profileId),
+          getTechniques(profileId)
         ])
         setWorkingHours(wh);
         setVacationMode(vm);

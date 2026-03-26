@@ -20,7 +20,7 @@ import { Separator } from "@/components/ui/separator"
 import { 
   Recipient, getRecipients, createRecipient, updateRecipient, deleteRecipient, 
   updateTelegramToken, setTelegramWebhook, DEFAULT_API_URL, 
-  getWebhookStatus, updateWebhookStatus,
+  getWebhookStatus, updateWebhookStatus, getTelegramToken,
   getWorkingHours, updateWorkingHours, WorkingHours, WorkingDay, defaultWorkingHours,
   getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,
   getTelegramConfig, updateTelegramConfig, TelegramSettings, defaultTelegramSettings,
@@ -77,8 +77,10 @@ export function SettingsModal({
       )
       setRecipients(persons.slice(0, 3))
       
-      const tokenConfig = data.find(r => r.nome === 'SYSTEM_TOKEN')
-      if (tokenConfig) setBotToken(tokenConfig.chatID)
+      // O botToken agora é global, buscamos apenas para compatibilidade visual se necessário, 
+      // mas não permitiremos edição individual.
+      const token = await getTelegramToken()
+      if (token) setBotToken(token)
 
       const status = await getWebhookStatus()
       setIsWebhookActive(status)
@@ -443,9 +445,9 @@ export function SettingsModal({
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="bot-token" className="text-lg font-bold flex items-center gap-2 text-primary">
-                <Key size={20} />
-                Telegram Bot Token
+              <Label className="text-lg font-bold flex items-center gap-2 text-primary">
+                <Bot size={20} />
+                Status do Bot Interativo
               </Label>
               <Button 
                 variant={isWebhookActive ? "destructive" : "outline"}
@@ -464,19 +466,14 @@ export function SettingsModal({
                 {isWebhookActive ? "Desativar modo interativo" : "Ativar Bot Interativo"}
               </Button>
             </div>
-            <Input
-              id="bot-token"
-              placeholder="Cole aqui o Token do @BotFather"
-              value={botToken}
-              onChange={(e) => setBotToken(e.target.value)}
-              className="rounded-xl h-12 bg-muted/50 border-border focus:border-primary font-mono text-xs"
-            />
+            
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-2 gap-2">
               <p className="text-[10px] text-muted-foreground leading-tight max-w-[70%]">
-                O bot responde aos comandos <b>/command1</b> (Hoje), <b>/command2</b> (Mês), <b>/command3</b> (Semana) e <b>/command4</b> (Próx. Mês).
+                O bot agora usa um token global. Registre seu <b>Chat ID</b> abaixo para receber notificações.
+                Comandos: <b>/command1</b>, <b>/command2</b>, <b>/command3</b>, <b>/command4</b>.
               </p>
               <Button size="sm" variant="outline" onClick={handleTestToken} disabled={testingToken} className="h-8 text-xs rounded-full gap-2 whitespace-nowrap">
-                {testingToken ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} Testar Token
+                {testingToken ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} Testar Conexão
               </Button>
             </div>
 

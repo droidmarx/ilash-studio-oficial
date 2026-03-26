@@ -34,51 +34,38 @@ async function getUserIdByToken(token: string): Promise<string | null> {
 
 export async function POST(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    let userId = searchParams.get('userId');
-
     const body = await request.json();
     
     if (!body.message || !body.message.text) {
       return NextResponse.json({ ok: true });
     }
 
-    // Se não tem userId na URL, tenta descobrir pelo token armazenado
-    if (!userId) {
-      // Extrai o token da URL do webhook (não disponível aqui, então busca de outra forma)
-      // Loga o erro mas continua tentando
-      console.warn('[Telegram Webhook] userId não encontrado na URL. Tentando identificar pelo banco de dados...');
-      
-      // Busca todos os tokens e tenta identificar qual bot recebeu a mensagem
-      // usando o bot_id do from field
-      const botId = body.message.from?.is_bot ? null : null; // não está disponível diretamente
-      
-      // Fallback: busca o primeiro usuário com token cadastrado (funciona para instância única)
-      const { data: tokenData } = await supabase
-        .from('configuracoes')
-        .select('user_id')
-        .eq('nome', 'SYSTEM_TOKEN')
-        .limit(1)
-        .maybeSingle();
-      
-      if (tokenData?.user_id) {
-        userId = tokenData.user_id;
-        console.log('[Telegram Webhook] userId identificado:', userId);
-      } else {
-        console.error('[Telegram Webhook] Nenhum token cadastrado no banco');
-        return NextResponse.json({ ok: true });
-      }
-    }
+    const chatId = body.message.chat.id.toString();
+    const text = body.message.text.toLowerCase();
 
-    const botToken = await getTelegramToken(userId ?? undefined);
+    // 1. Identifica o userId baseado no chat_id cadastrado em configuracoes
+    const { data: configData, error: configError } = await supabase
+      .from('configuracoes')
+      .select('user_id')
+      .eq('valor', chatId)
+      .maybeSingle();
 
-    if (!botToken) {
-      console.error('[Telegram Webhook] Token não encontrado para userId:', userId);
+    if (!configData || configError) {
+      console.warn('[Telegram Webhook] Chat ID não identificado:', chatId);
+      // Opcional: Responder ao usuário informando que o chat não está cadastrado
       return NextResponse.json({ ok: true });
     }
 
-    const chatId = body.message.chat.id;
-    const text = body.message.text.toLowerCase();
+    const userId = configData.user_id;
+
+    // 2. Busca o token global do bot
+    const botToken = await getTelegramToken();
+
+    if (!botToken) {
+      console.error('[Telegram Webhook] Bot Token global não configurado');
+      return NextResponse.json({ ok: true });
+    }
+
 
     const clients = await getClients(userId ?? undefined);
     const nowBrasilia = subHours(new Date(), 3);

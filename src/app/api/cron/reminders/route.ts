@@ -1,7 +1,7 @@
-
 import { NextResponse } from 'next/server';
-import { getClients, getTelegramToken, getRecipients, updateClient, getLastSummaryDate, updateLastSummaryDate, getTelegramConfig } from '@/lib/api';
+import { getClients, getTelegramToken, getRecipients, updateClient, getLastSummaryDate, updateLastSummaryDate, getTelegramConfig, defaultTelegramSettings } from '@/lib/api';
 import { addHours, subMinutes, addMinutes, parseISO, isWithinInterval, format, parse, isValid, subHours, isSameDay } from 'date-fns';
+import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,95 +21,122 @@ export async function GET(request: Request) {
   }
 
   try {
-    const clients = await getClients();
     const botToken = await getTelegramToken();
-    const recipients = await getRecipients();
+    if (!botToken) {
+      return NextResponse.json({ message: 'Bot Token global não configurado' });
+    }
+
+    // 1. Busca todos os agendamentos
+    const allClients = await getClients();
     
-    const adminRecipients = recipients.filter(r => 
-      !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE'].includes(r.nome) && r.chatID
-    );
+    // 2. Busca todas as configurações de todos os usuários
+    const { data: allConfigs, error: configsError } = await supabase
+      .from('configuracoes')
+      .select('*');
+
+    if (configsError || !allConfigs) {
+      return NextResponse.json({ error: 'Erro ao buscar configurações' }, { status: 500 });
+    }
+
+    // Agrupa configurações por user_id
+    const configsByUser = allConfigs.reduce((acc: any, curr: any) => {
+      if (!acc[curr.user_id]) acc[curr.user_id] = [];
+      acc[curr.user_id].push(curr);
+      return acc;
+    }, {});
 
     const nowUTC = new Date();
     const nowBrasilia = subHours(nowUTC, 3);
     const todayStr = format(nowBrasilia, 'yyyy-MM-dd');
     const currentHour = nowBrasilia.getHours();
 
-    if (!botToken || adminRecipients.length === 0) {
-      return NextResponse.json({ message: 'Configurações incompletas' });
-    }
+    // 3. Itera sobre cada usuário/estúdio
+    for (const userId in configsByUser) {
+      const userConfigs = configsByUser[userId];
+      const adminRecipients = userConfigs.filter((r: any) => 
+        !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'].includes(r.nome) && r.valor
+      );
 
-    const telegramConfig = await getTelegramConfig();
+      if (adminRecipients.length === 0) continue;
 
-    // --- LÓGICA 1: RESUMO DIÁRIO DAS 8H ---
-    if (telegramConfig.dailySummary && currentHour === 8) {
-      const lastSentDate = await getLastSummaryDate();
-      
-      if (lastSentDate !== todayStr) {
-        const todayAppointments = clients.filter(client => {
+      const rawTelegramConfig = userConfigs.find((r: any) => r.nome === 'TELEGRAM_CONFIG')?.valor;
+      const telegramConfig = rawTelegramConfig ? JSON.parse(rawTelegramConfig) : defaultTelegramSettings;
+
+      const userClients = allClients.filter(c => (c as any).user_id === userId);
+
+      // --- LÓGICA 1: RESUMO DIÁRIO DAS 8H ---
+      if (telegramConfig.dailySummary && currentHour === 8) {
+        const lastSentDate = userConfigs.find((r: any) => r.nome === 'SUMMARY_STATE')?.valor;
+        
+        if (lastSentDate !== todayStr) {
+          const todayAppointments = userClients.filter(client => {
+            try {
+              const appDate = client.data.includes('T') ? parseISO(client.data) : parse(client.data, 'dd/MM/yyyy HH:mm', new Date());
+              return isValid(appDate) && isSameDay(appDate, nowBrasilia);
+            } catch { return false; }
+          }).sort((a, b) => {
+            const da = a.data.includes('T') ? parseISO(a.data) : parse(a.data, 'dd/MM/yyyy HH:mm', new Date());
+            const db = b.data.includes('T') ? parseISO(b.data) : parse(b.data, 'dd/MM/yyyy HH:mm', new Date());
+            return da.getTime() - db.getTime();
+          });
+
+          let summaryMessage = "";
+          if (todayAppointments.length > 0) {
+            summaryMessage = `✨ <b>Bom dia! Agenda de Hoje</b> ✨\n\n` +
+              todayAppointments.map(app => {
+                const appDate = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
+                const status = app.confirmado === false ? "⏳ <b>(Pendente)</b>" : "✅ <b>(Confirmado)</b>";
+                return `${status}\n⏰ <b>${format(appDate, 'HH:mm')}</b> - ${app.nome}\n🎨 ${app.servico}`;
+              }).join('\n\n') +
+              `\n\n🚀 <i>Tenha um ótimo dia de trabalho!</i>`;
+          } else {
+            summaryMessage = `✨ <b>Bom dia!</b> ✨\n\nVocê não tem agendamentos para hoje.\n💖 <i>Que tal aproveitar para organizar o studio?</i>`;
+          }
+
+          for (const admin of adminRecipients) {
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: admin.valor, text: summaryMessage, parse_mode: 'HTML' }),
+            });
+          }
+          
+          // Atualiza SUMMARY_STATE para este usuário
+          await supabase
+            .from('configuracoes')
+            .upsert({ user_id: userId, nome: 'SUMMARY_STATE', valor: todayStr }, { onConflict: 'user_id, nome' });
+        }
+      }
+
+      // --- LÓGICA 2: LEMBRETES DE 2 HORAS ---
+      if (telegramConfig.reminder2h) {
+        const targetTime = addHours(nowBrasilia, 2);
+        const windowStart = subMinutes(targetTime, 10);
+        const windowEnd = addMinutes(targetTime, 10);
+
+        const upcoming = userClients.filter(c => {
+          if (c.confirmado === false || c.reminderSent === true) return false;
           try {
-            const appDate = client.data.includes('T') ? parseISO(client.data) : parse(client.data, 'dd/MM/yyyy HH:mm', new Date());
-            return isValid(appDate) && isSameDay(appDate, nowBrasilia);
+            const appDate = c.data.includes('T') ? parseISO(c.data) : parse(c.data, 'dd/MM/yyyy HH:mm', new Date());
+            return isValid(appDate) && isWithinInterval(appDate, { start: windowStart, end: windowEnd });
           } catch { return false; }
-        }).sort((a, b) => {
-          const da = a.data.includes('T') ? parseISO(a.data) : parse(a.data, 'dd/MM/yyyy HH:mm', new Date());
-          const db = b.data.includes('T') ? parseISO(b.data) : parse(b.data, 'dd/MM/yyyy HH:mm', new Date());
-          return da.getTime() - db.getTime();
         });
 
-        let summaryMessage = "";
-        if (todayAppointments.length > 0) {
-          summaryMessage = `✨ <b>Bom dia! Agenda de Hoje</b> ✨\n\n` +
-            todayAppointments.map(app => {
-              const appDate = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
-              const status = app.confirmado === false ? "⏳ <b>(Pendente)</b>" : "✅ <b>(Confirmado)</b>";
-              return `${status}\n⏰ <b>${format(appDate, 'HH:mm')}</b> - ${app.nome}\n🎨 ${app.servico}`;
-            }).join('\n\n') +
-            `\n\n🚀 <i>Tenha um ótimo dia de trabalho!</i>`;
-        } else {
-          summaryMessage = `✨ <b>Bom dia!</b> ✨\n\nVocê não tem agendamentos para hoje.\n💖 <i>Que tal aproveitar para organizar o studio?</i>`;
+        for (const app of upcoming) {
+          const appDate = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
+          const msg = `⏰ <b>Lembrete VIP I Lash Studio</b>\n\n👤 <b>Cliente:</b> ${app.nome}\n🎨 <b>Serviço:</b> ${app.servico}\n⏰ <b>Horário:</b> ${format(appDate, 'HH:mm')}\n\n🚀 <i>Sua cliente chega em breve!</i>`;
+
+          let sent = false;
+          for (const admin of adminRecipients) {
+            const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: admin.valor, text: msg, parse_mode: 'HTML' }),
+            });
+            if (res.ok) sent = true;
+          }
+          if (sent) await updateClient(app.id, { reminderSent: true });
         }
-
-        for (const admin of adminRecipients) {
-          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: admin.chatID, text: summaryMessage, parse_mode: 'HTML' }),
-          });
-        }
-        
-        await updateLastSummaryDate(todayStr);
-      }
-    }
-
-    // --- LÓGICA 2: LEMBRETES DE 2 HORAS ---
-    if (telegramConfig.reminder2h) {
-      const targetTime = addHours(nowBrasilia, 2);
-      const windowStart = subMinutes(targetTime, 10);
-      const windowEnd = addMinutes(targetTime, 10);
-
-      const upcoming = clients.filter(c => {
-        // Lembretes apenas para confirmados
-        if (c.confirmado === false || c.reminderSent === true) return false;
-        try {
-          const appDate = c.data.includes('T') ? parseISO(c.data) : parse(c.data, 'dd/MM/yyyy HH:mm', new Date());
-          return isValid(appDate) && isWithinInterval(appDate, { start: windowStart, end: windowEnd });
-        } catch { return false; }
-      });
-
-      for (const app of upcoming) {
-        const appDate = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
-        const msg = `⏰ <b>Lembrete VIP I Lash Studio</b>\n\n👤 <b>Cliente:</b> ${app.nome}\n🎨 <b>Serviço:</b> ${app.servico}\n⏰ <b>Horário:</b> ${format(appDate, 'HH:mm')}\n\n🚀 <i>Sua cliente chega em breve!</i>`;
-
-        let sent = false;
-        for (const admin of adminRecipients) {
-          const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: admin.chatID, text: msg, parse_mode: 'HTML' }),
-          });
-          if (res.ok) sent = true;
-        }
-        if (sent) await updateClient(app.id, { reminderSent: true });
       }
     }
 

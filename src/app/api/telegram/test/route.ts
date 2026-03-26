@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getRecipients } from '@/lib/api';
+import { getRecipients, getTelegramToken } from '@/lib/api';
 
 export async function POST(request: Request) {
   try {
-    const { token, userId } = await request.json();
+    const { userId } = await request.json();
+    
+    // O token agora é global
+    const token = await getTelegramToken();
     
     if (!token) {
-      return NextResponse.json({ error: 'Token não fornecido' }, { status: 400 });
+      return NextResponse.json({ error: 'Token global não configurado no servidor' }, { status: 500 });
     }
 
     // 1. Valida o token com a API do Telegram

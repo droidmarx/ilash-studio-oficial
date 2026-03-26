@@ -43,7 +43,7 @@ export function SettingsModal({
   theme,
   toggleTheme
 }: SettingsModalProps) {
-  const [botToken, setBotToken] = useState("")
+// const [botToken, setBotToken] = useState("") (Removido: o token agora é global no servidor)
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -72,8 +72,9 @@ export function SettingsModal({
       )
       setRecipients(persons.slice(0, 3))
       
-      const token = await getTelegramToken()
-      if (token) setBotToken(token)
+      // O token agora é global e não deve ser exposto ao cliente
+      // const token = await getTelegramToken()
+      // if (token) setBotToken(token)
 
       const wh = await getWorkingHours()
       setWorkingHours(wh)
@@ -115,10 +116,7 @@ export function SettingsModal({
   }
 
   const handleTestToken = async () => {
-    if (!botToken) {
-      toast({ variant: "destructive", title: "Erro", description: "O Token Global não está configurado no servidor." })
-      return
-    }
+    // Validação de botToken removida pois o token é gerencial no servidor
     setTestingToken(true)
     try {
       const res = await fetch('/api/telegram/test', {

@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { getClients, getTelegramToken } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { 
   parseISO, 
   parse, 
@@ -18,27 +19,68 @@ import { ptBR } from 'date-fns/locale';
 
 export const dynamic = 'force-dynamic';
 
+// Busca o userId pelo token do bot recebido na mensagem
+async function getUserIdByToken(token: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('user_id')
+    .eq('nome', 'SYSTEM_TOKEN')
+    .eq('valor', token)
+    .maybeSingle();
+  
+  if (error || !data) return null;
+  return data.user_id;
+}
+
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    let userId = searchParams.get('userId');
 
-    if (!userId) {
-      console.error('[Telegram Webhook] userId não encontrado na URL');
+    const body = await request.json();
+    
+    if (!body.message || !body.message.text) {
       return NextResponse.json({ ok: true });
     }
 
-    const body = await request.json();
-    const botToken = await getTelegramToken(userId);
+    // Se não tem userId na URL, tenta descobrir pelo token armazenado
+    if (!userId) {
+      // Extrai o token da URL do webhook (não disponível aqui, então busca de outra forma)
+      // Loga o erro mas continua tentando
+      console.warn('[Telegram Webhook] userId não encontrado na URL. Tentando identificar pelo banco de dados...');
+      
+      // Busca todos os tokens e tenta identificar qual bot recebeu a mensagem
+      // usando o bot_id do from field
+      const botId = body.message.from?.is_bot ? null : null; // não está disponível diretamente
+      
+      // Fallback: busca o primeiro usuário com token cadastrado (funciona para instância única)
+      const { data: tokenData } = await supabase
+        .from('configuracoes')
+        .select('user_id')
+        .eq('nome', 'SYSTEM_TOKEN')
+        .limit(1)
+        .maybeSingle();
+      
+      if (tokenData?.user_id) {
+        userId = tokenData.user_id;
+        console.log('[Telegram Webhook] userId identificado:', userId);
+      } else {
+        console.error('[Telegram Webhook] Nenhum token cadastrado no banco');
+        return NextResponse.json({ ok: true });
+      }
+    }
 
-    if (!botToken || !body.message || !body.message.text) {
+    const botToken = await getTelegramToken(userId ?? undefined);
+
+    if (!botToken) {
+      console.error('[Telegram Webhook] Token não encontrado para userId:', userId);
       return NextResponse.json({ ok: true });
     }
 
     const chatId = body.message.chat.id;
     const text = body.message.text.toLowerCase();
 
-    const clients = await getClients(userId);
+    const clients = await getClients(userId ?? undefined);
     const nowBrasilia = subHours(new Date(), 3);
 
     let responseMessage = "";

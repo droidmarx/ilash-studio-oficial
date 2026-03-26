@@ -170,17 +170,22 @@ export function SettingsModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: botToken, userId: perfil.id }),
       })
+      const data = await res.json()
       if (res.ok) {
-        toast({ title: "Sucesso", description: "Mensagem de teste enviada para os administradores." })
+        toast({ title: "✅ Conexão OK!", description: `Mensagem enviada para ${data.count} destinatário(s) via @${data.botName}.` })
       } else {
-        throw new Error()
+        toast({ 
+          variant: "destructive", 
+          title: "Erro no Teste", 
+          description: data.error || "Verifique seu Token e sua lista de destinatários." 
+        })
       }
     } catch (error: any) {
       console.error("Erro no teste do Telegram:", error);
       toast({ 
         variant: "destructive", 
         title: "Erro no Teste", 
-        description: error.message || "Verifique seu Token e sua lista de destinatários." 
+        description: "Falha de conexão com o servidor." 
       })
     } finally {
       setTestingToken(false)

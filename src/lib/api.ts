@@ -131,13 +131,13 @@ export async function getTelegramToken(): Promise<string | null> {
 export async function updateTelegramToken(token: string): Promise<void> {
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'SYSTEM_TOKEN', valor: token }, { onConflict: 'nome' });
+    .upsert({ nome: 'SYSTEM_TOKEN', valor: token }, { onConflict: 'user_id, nome' });
 }
 
 export async function updateMainApiUrl(url: string): Promise<void> {
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'MAIN_API_URL', valor: url }, { onConflict: 'nome' });
+    .upsert({ nome: 'MAIN_API_URL', valor: url }, { onConflict: 'user_id, nome' });
 }
 
 export async function getWebhookStatus(): Promise<boolean> {
@@ -155,7 +155,7 @@ export async function updateWebhookStatus(active: boolean): Promise<void> {
   const value = active ? 'ACTIVE' : 'INACTIVE';
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'WEBHOOK_STATE', valor: value }, { onConflict: 'nome' });
+    .upsert({ nome: 'WEBHOOK_STATE', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getWorkingHours(): Promise<WorkingHours> {
@@ -177,7 +177,7 @@ export async function updateWorkingHours(hours: WorkingHours): Promise<void> {
   const value = JSON.stringify(hours);
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'WORKING_HOURS', valor: value }, { onConflict: 'nome' });
+    .upsert({ nome: 'WORKING_HOURS', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getVacationMode(): Promise<VacationMode> {
@@ -199,7 +199,7 @@ export async function updateVacationMode(mode: VacationMode): Promise<void> {
   const value = JSON.stringify(mode);
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'VACATION_MODE', valor: value }, { onConflict: 'nome' });
+    .upsert({ nome: 'VACATION_MODE', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getTelegramConfig(): Promise<TelegramSettings> {
@@ -221,7 +221,7 @@ export async function updateTelegramConfig(settings: TelegramSettings): Promise<
   const value = JSON.stringify(settings);
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'nome' });
+    .upsert({ nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getTechniques(): Promise<string[]> {
@@ -243,7 +243,7 @@ export async function updateTechniques(techniques: string[]): Promise<void> {
   const value = JSON.stringify(techniques);
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'TECHNIQUES', valor: value }, { onConflict: 'nome' });
+    .upsert({ nome: 'TECHNIQUES', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function updateRecipient(recipient: Recipient): Promise<void> {
@@ -340,7 +340,7 @@ export async function getLastSummaryDate(): Promise<string | null> {
 export async function updateLastSummaryDate(dateStr: string): Promise<void> {
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'SUMMARY_STATE', valor: dateStr }, { onConflict: 'nome' });
+    .upsert({ nome: 'SUMMARY_STATE', valor: dateStr }, { onConflict: 'user_id, nome' });
 }
 
 export async function setTelegramWebhook(token: string, url: string): Promise<boolean> {

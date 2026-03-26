@@ -19,13 +19,12 @@ import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
 import { 
   Recipient, getRecipients, createRecipient, updateRecipient, deleteRecipient, 
-  updateTelegramToken, setTelegramWebhook, DEFAULT_API_URL, 
-  getWebhookStatus, updateWebhookStatus, getTelegramToken,
+  setTelegramWebhook, getWebhookStatus, updateWebhookStatus, getTelegramToken,
   getWorkingHours, updateWorkingHours, WorkingHours, WorkingDay, defaultWorkingHours,
   getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,
   getTelegramConfig, updateTelegramConfig, TelegramSettings, defaultTelegramSettings,
   getTechniques, updateTechniques, defaultTechniques,
-  getProfile, updateProfile, checkSlugAvailability, Perfil
+  getProfile, updateProfile, Perfil
 } from "@/lib/api"
 import { ThemeToggle } from "./ThemeToggle"
 
@@ -46,10 +45,8 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const [botToken, setBotToken] = useState("")
   const [recipients, setRecipients] = useState<Recipient[]>([])
-  const [isWebhookActive, setIsWebhookActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [webhookLoading, setWebhookLoading] = useState(false)
   const [workingHours, setWorkingHours] = useState<WorkingHours>(defaultWorkingHours)
   const [vacationMode, setVacationMode] = useState<VacationMode>(defaultVacationMode)
   const [telegramConfig, setTelegramConfig] = useState<TelegramSettings>(defaultTelegramSettings)
@@ -58,8 +55,6 @@ export function SettingsModal({
   const [testingToken, setTestingToken] = useState(false)
   
   const [perfil, setPerfil] = useState<Partial<Perfil>>({ nome_exibicao: "", slug: "" })
-  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
-  
   const { toast } = useToast()
 
   useEffect(() => {
@@ -77,13 +72,8 @@ export function SettingsModal({
       )
       setRecipients(persons.slice(0, 3))
       
-      // O botToken agora é global, buscamos apenas para compatibilidade visual se necessário, 
-      // mas não permitiremos edição individual.
       const token = await getTelegramToken()
       if (token) setBotToken(token)
-
-      const status = await getWebhookStatus()
-      setIsWebhookActive(status)
 
       const wh = await getWorkingHours()
       setWorkingHours(wh)
@@ -98,16 +88,14 @@ export function SettingsModal({
       setTechniques(tks)
 
       const p = await getProfile()
-      if (p) {
-        setPerfil(p as Perfil)
-      }
+      if (p) setPerfil(p as Perfil)
       
     } catch (error) {
       console.error("Erro ao carregar configurações", error)
     } finally {
       setLoading(false)
     }
-}
+  }
 
   const handleAddRecipient = () => {
     if (recipients.length >= 3) return
@@ -126,43 +114,9 @@ export function SettingsModal({
     setRecipients(newRecipients)
   }
 
-  const handleToggleWebhook = async () => {
-    if (!botToken) {
-      toast({ variant: "destructive", title: "Erro", description: "Salve o Token do Bot antes de alterar o modo interativo." })
-      return
-    }
-    setWebhookLoading(true)
-    try {
-      const currentUrl = window.location.origin
-      const targetUrl = isWebhookActive ? "" : currentUrl
-      const success = await setTelegramWebhook(botToken.trim(), targetUrl)
-      
-      if (success) {
-        const nextState = !isWebhookActive
-        await updateWebhookStatus(nextState)
-        setIsWebhookActive(nextState)
-        toast({ 
-          title: nextState ? "Bot Ativado!" : "Bot Desativado", 
-          description: nextState ? "Agora seu robô responderá aos comandos /command1, /command2, /command3 e /command4." : "O robô não responderá mais a comandos interativos." 
-        })
-      } else {
-        throw new Error()
-      }
-    } catch (error: any) {
-      console.error("Erro ao ativar webhook:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Falha na Operação", 
-        description: error.message || "Verifique seu Token e tente novamente." 
-      })
-    } finally {
-      setWebhookLoading(false)
-    }
-  }
-
   const handleTestToken = async () => {
     if (!botToken) {
-      toast({ variant: "destructive", title: "Erro", description: "Informe o Token do Bot primeiro." })
+      toast({ variant: "destructive", title: "Erro", description: "O Token Global não está configurado no servidor." })
       return
     }
     setTestingToken(true)
@@ -170,19 +124,20 @@ export function SettingsModal({
       const res = await fetch('/api/telegram/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: botToken, userId: perfil.id }),
+        body: JSON.stringify({ userId: perfil.id }),
       })
       if (res.ok) {
-        toast({ title: "Sucesso", description: "Mensagem de teste enviada para os administradores." })
+        toast({ title: "Sucesso", description: "Mensagem de teste enviada para os administradores ativos." })
       } else {
-        throw new Error()
+        const err = await res.json()
+        throw new Error(err.error || "Erro ao testar")
       }
     } catch (error: any) {
       console.error("Erro no teste do Telegram:", error);
       toast({ 
         variant: "destructive", 
         title: "Erro no Teste", 
-        description: error.message || "Verifique seu Token e sua lista de destinatários." 
+        description: error.message || "Verifique sua lista de destinatários." 
       })
     } finally {
       setTestingToken(false)
@@ -191,16 +146,11 @@ export function SettingsModal({
 
   const handleSave = async () => {
     setSaving(true)
-    
     try {
       await updateWorkingHours(workingHours);
       await updateVacationMode(vacationMode);
       await updateTelegramConfig(telegramConfig);
       await updateTechniques(techniques);
-
-      if (botToken) {
-        await updateTelegramToken(botToken.trim());
-      }
 
       const remoteRecipients = await getRecipients()
       for (const remote of remoteRecipients) {
@@ -220,8 +170,9 @@ export function SettingsModal({
         }
       }
 
-      if (perfil.nome_exibicao || perfil.slug) {
-        await updateProfile(perfil as Perfil);
+      const p = perfil as Perfil;
+      if (p.nome_exibicao || p.slug) {
+        await updateProfile(p);
       }
 
       toast({ title: "Configurações Salvas", description: "Configurações sincronizadas com sucesso." })
@@ -229,11 +180,7 @@ export function SettingsModal({
       onClose()
     } catch (error: any) {
       console.error("Erro ao salvar:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro ao Salvar", 
-        description: error.message || "Falha ao sincronizar dados. Verifique se o bucket 'logos' foi criado no Supabase." 
-      })
+      toast({ variant: "destructive", title: "Erro ao Salvar", description: error.message || "Falha ao sincronizar dados." })
     } finally {
       setSaving(false)
     }
@@ -253,10 +200,10 @@ export function SettingsModal({
         </DialogHeader>
 
         <div className="space-y-8 py-6">
+          {/* Sessão: Identidade */}
           <div className="space-y-4">
             <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-              <Crown size={20} />
-              Identidade do Studio
+              <Crown size={20} /> Identidade do Studio
             </Label>
             <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
               <div className="space-y-2">
@@ -289,58 +236,38 @@ export function SettingsModal({
 
           <Separator className="bg-primary/10" />
 
-          <div className="space-y-4">
-            <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-              <Sparkles size={20} />
-              Aparência do Sistema
-            </Label>
-            <div className="flex items-center justify-between bg-muted/30 p-4 rounded-2xl border border-border">
-              <div className="space-y-0.5">
-                <p className="text-sm font-bold">Modo de Exibição</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Alternar entre tema claro e escuro</p>
-              </div>
-              <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
-            </div>
-          </div>
-
-          <Separator className="bg-primary/10" />
-
-          {/* Configuração de Técnicas */}
+          {/* Sessão: Aparência e Técnicas */}
           <div className="space-y-6">
-            <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-              <Sparkles size={20} />
-              Modelos de Técnicas Oferecidas
-            </Label>
+            <div className="space-y-4">
+              <Label className="text-lg font-bold flex items-center gap-2 text-primary">
+                <Sparkles size={20} /> Aparência e Serviços
+              </Label>
+              <div className="flex items-center justify-between bg-muted/30 p-4 rounded-2xl border border-border">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-bold">Modo Escuro</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Alternar entre tema claro e escuro</p>
+                </div>
+                <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+              </div>
+            </div>
             
             <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
               <div className="flex flex-wrap gap-2">
                 {techniques.map((tech, index) => (
-                  <div key={index} className="flex items-center gap-2 bg-background border border-border shadow-sm rounded-full px-3 py-1.5 text-sm font-semibold animate-in zoom-in duration-300">
+                  <div key={index} className="flex items-center gap-2 bg-background border border-border shadow-sm rounded-full px-3 py-1.5 text-sm font-semibold">
                     <span>{tech}</span>
-                    <button 
-                      onClick={() => setTechniques(techniques.filter((_, i) => i !== index))}
-                      className="text-muted-foreground hover:text-destructive transition-colors ml-1"
-                    >
-                      <XCircle size={16} />
+                    <button onClick={() => setTechniques(techniques.filter((_, i) => i !== index))} className="text-muted-foreground hover:text-destructive">
+                      <XCircle size={14} />
                     </button>
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2 h-12 mt-2">
+              <div className="flex gap-2 h-10">
                 <Input 
-                  placeholder="Nova técnica (Ex: Híbrido, Russo Volume...)" 
+                  placeholder="Nova técnica..." 
                   value={newTechnique}
                   onChange={(e) => setNewTechnique(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && newTechnique.trim()) {
-                      e.preventDefault();
-                      if (!techniques.includes(newTechnique.trim())) {
-                        setTechniques([...techniques, newTechnique.trim()]);
-                      }
-                      setNewTechnique("");
-                    }
-                  }}
-                  className="h-full rounded-xl bg-background border-border text-sm flex-1 focus:ring-primary/20"
+                  className="h-full rounded-xl bg-background border-border text-xs flex-1"
                 />
                 <Button 
                   onClick={() => {
@@ -350,32 +277,29 @@ export function SettingsModal({
                     }
                   }}
                   disabled={!newTechnique.trim()}
-                  className="h-full rounded-xl px-4 gap-2 bg-primary text-primary-foreground font-bold"
+                  className="h-full rounded-xl px-4 text-xs font-bold"
                 >
-                  <PlusCircle size={16} /> Adicionar
+                  <PlusCircle size={14} /> Add
                 </Button>
               </div>
             </div>
           </div>
 
-
           <Separator className="bg-primary/10" />
 
-          {/* Agenda & Férias */}
+          {/* Sessão: Agenda e Notificações */}
           <div className="space-y-6">
             <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-              <Calendar size={20} />
-              Configuração de Agenda e Férias
+              <Calendar size={20} /> Agenda e Notificações
             </Label>
             
-            {/* Vacation Mode */}
+            {/* Modo Férias */}
             <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <p className="text-sm font-bold flex items-center gap-2">
                     <Palmtree size={16} className="text-primary" /> Modo Férias
                   </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Bloqueia novos agendamentos</p>
                 </div>
                 <Switch 
                   checked={vacationMode.active} 
@@ -383,108 +307,21 @@ export function SettingsModal({
                 />
               </div>
               {vacationMode.active && (
-                <div className="space-y-2 pt-2 animate-in fade-in zoom-in">
-                  <Label className="text-xs">Mensagem para os clientes</Label>
-                  <Textarea 
-                    value={vacationMode.message}
-                    onChange={(e) => setVacationMode({...vacationMode, message: e.target.value})}
-                    placeholder="Ex: Estamos de férias! Retornamos em..."
-                    className="resize-none h-20 rounded-xl bg-background border-border"
-                  />
-                </div>
+                <Textarea 
+                  value={vacationMode.message}
+                  onChange={(e) => setVacationMode({...vacationMode, message: e.target.value})}
+                  className="resize-none h-16 rounded-xl bg-background border-border text-xs"
+                />
               )}
             </div>
 
-            {/* Working Hours */}
+            {/* Configurações do Robô */}
             <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
-              <div className="space-y-0.5 mb-4">
-                <p className="text-sm font-bold flex items-center gap-2">
-                  <Clock size={16} className="text-primary" /> Horário de Trabalho
-                </p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Dias e horários que você atende</p>
-              </div>
-              <div className="space-y-3">
-                {Object.entries({
-                  seg: 'Segunda', ter: 'Terça', qua: 'Quarta', qui: 'Quinta', sex: 'Sexta', sab: 'Sábado', dom: 'Domingo'
-                }).map(([key, label]) => {
-                  const k = key as keyof WorkingHours;
-                  const dayData = workingHours[k];
-                  const updateDay = (field: keyof WorkingDay, val: any) => {
-                    setWorkingHours({
-                      ...workingHours,
-                      [k]: { ...dayData, [field]: val }
-                    })
-                  }
-                  return (
-                    <div key={key} className="flex flex-wrap sm:flex-nowrap items-center gap-3">
-                      <div className="flex items-center gap-2 w-full sm:w-28">
-                        <Switch checked={dayData.active} onCheckedChange={(c) => updateDay('active', c)} />
-                        <span className="text-xs font-semibold">{label}</span>
-                      </div>
-                      <Input 
-                        type="time" 
-                        value={dayData.start}
-                        onChange={(e) => updateDay('start', e.target.value)}
-                        disabled={!dayData.active}
-                        className="h-8 text-xs rounded-lg bg-background w-24" 
-                      />
-                      <span className="text-muted-foreground text-xs">até</span>
-                      <Input 
-                        type="time" 
-                        value={dayData.end}
-                        onChange={(e) => updateDay('end', e.target.value)}
-                        disabled={!dayData.active}
-                        className="h-8 text-xs rounded-lg bg-background w-24" 
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-                <Bot size={20} />
-                Status do Bot Interativo
-              </Label>
-              <Button 
-                variant={isWebhookActive ? "destructive" : "outline"}
-                size="sm" 
-                onClick={handleToggleWebhook}
-                disabled={webhookLoading || !botToken}
-                className="rounded-full gap-2 h-8 px-4"
-              >
-                {webhookLoading ? (
-                  <Loader2 className="animate-spin" size={14} />
-                ) : isWebhookActive ? (
-                  <XCircle size={14} />
-                ) : (
-                  <Bot size={14} />
-                )}
-                {isWebhookActive ? "Desativar modo interativo" : "Ativar Bot Interativo"}
-              </Button>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-2 gap-2">
-              <p className="text-[10px] text-muted-foreground leading-tight max-w-[70%]">
-                O bot agora usa um token global. Registre seu <b>Chat ID</b> abaixo para receber notificações.
-                Comandos: <b>/command1</b>, <b>/command2</b>, <b>/command3</b>, <b>/command4</b>.
-              </p>
-              <Button size="sm" variant="outline" onClick={handleTestToken} disabled={testingToken} className="h-8 text-xs rounded-full gap-2 whitespace-nowrap">
-                {testingToken ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} Testar Conexão
-              </Button>
-            </div>
-
-            {/* Telegram Settings */}
-            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4 mt-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <p className="text-sm font-bold flex items-center gap-2">
-                    <RefreshCw size={16} className="text-primary" /> Resumo Diário
+                    <RefreshCw size={16} className="text-primary" /> Resumo Diário (8h)
                   </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Envia a agenda do dia às 8h</p>
                 </div>
                 <Switch 
                   checked={telegramConfig.dailySummary} 
@@ -497,7 +334,6 @@ export function SettingsModal({
                   <p className="text-sm font-bold flex items-center gap-2">
                     <Bell size={16} className="text-primary" /> Aviso 2h Antes
                   </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Lembra da cliente que está chegando</p>
                 </div>
                 <Switch 
                   checked={telegramConfig.reminder2h} 
@@ -505,63 +341,59 @@ export function SettingsModal({
                 />
               </div>
             </div>
+
+            {/* Horário de Trabalho */}
+            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-3">
+              <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">Horário de Atendimento</Label>
+              <div className="space-y-2">
+                {['seg','ter','qua','qui','sex','sab','dom'].map(k => {
+                  const day = k as keyof WorkingHours;
+                  const dayMap: Record<string, string> = { seg: 'Seg', ter: 'Ter', qua: 'Qua', qui: 'Qui', sex: 'Sex', sab: 'Sab', dom: 'Dom' };
+                  return (
+                    <div key={k} className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 w-16">
+                        <Switch checked={workingHours[day].active} onCheckedChange={(c) => setWorkingHours({...workingHours, [day]: {...workingHours[day], active: c}})} />
+                        <span className="text-[10px] font-bold">{dayMap[k]}</span>
+                      </div>
+                      <Input type="time" value={workingHours[day].start} onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], start: e.target.value}})} disabled={!workingHours[day].active} className="h-7 text-[10px] px-2 rounded-lg bg-background w-16" />
+                      <span className="text-[10px] text-muted-foreground">até</span>
+                      <Input type="time" value={workingHours[day].end} onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], end: e.target.value}})} disabled={!workingHours[day].active} className="h-7 text-[10px] px-2 rounded-lg bg-background w-16" />
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
           <Separator className="bg-primary/10" />
 
-          <div className="space-y-6">
+          {/* Sessão: Destinatários */}
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-                <Send size={20} />
-                Destinatários de Alerta (Máx. 3)
+                <Send size={20} /> Destinatários de Alerta
               </Label>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleAddRecipient}
-                disabled={recipients.length >= 3 || loading}
-                className="text-primary hover:bg-primary/10 gap-2"
-              >
-                <PlusCircle size={16} /> Adicionar
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={handleTestToken} disabled={testingToken || !recipients.some(r => r.chatID?.trim())} className="h-8 text-[10px] rounded-full gap-2">
+                  {testingToken ? <Loader2 size={10} className="animate-spin" /> : <ShieldCheck size={10} />} Testar
+                </Button>
+                <Button size="sm" variant="ghost" onClick={handleAddRecipient} disabled={recipients.length >= 3 || loading} className="text-primary hover:bg-primary/10 h-8 gap-1 text-[10px]">
+                  <PlusCircle size={14} /> Add
+                </Button>
+              </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               {loading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="animate-spin text-primary" />
-                </div>
+                <div className="flex justify-center p-4 text-primary"><Loader2 className="animate-spin" /></div>
               ) : recipients.map((r, index) => (
-                <div key={r.id} className="bg-muted/30 p-4 rounded-2xl border border-border space-y-3 relative group">
-                  <button 
-                    onClick={() => handleRemoveRecipient(index)}
-                    className="absolute top-2 right-2 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 size={16} />
+                <div key={r.id} className="bg-muted/30 p-3 rounded-xl border border-border space-y-2 relative group">
+                  <button onClick={() => handleRemoveRecipient(index)} className="absolute top-1.5 right-1.5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Trash2 size={12} />
                   </button>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                        <User size={10} /> Nome do Admin
-                      </Label>
-                      <Input
-                        placeholder="Ex: Maria"
-                        value={r.nome}
-                        onChange={(e) => handleUpdateRecipientField(index, 'nome', e.target.value)}
-                        className="rounded-lg h-10 bg-background border-border"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                        <MessageSquare size={10} /> Chat ID
-                      </Label>
-                      <Input
-                        placeholder="Ex: 5759760387"
-                        value={r.chatID}
-                        onChange={(e) => handleUpdateRecipientField(index, 'chatID', e.target.value)}
-                        className="rounded-lg h-10 bg-background border-border"
-                      />
-                    </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="Nome" value={r.nome} onChange={(e) => handleUpdateRecipientField(index, 'nome', e.target.value)} className="h-8 text-[10px] bg-background border-border" />
+                    <Input placeholder="Chat ID" value={r.chatID} onChange={(e) => handleUpdateRecipientField(index, 'chatID', e.target.value)} className="h-8 text-[10px] bg-background border-border" />
                   </div>
                 </div>
               ))}
@@ -569,13 +401,9 @@ export function SettingsModal({
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-3 mt-4">
-          <Button variant="ghost" onClick={onClose} disabled={saving} className="rounded-xl">Cancelar</Button>
-          <Button 
-            onClick={handleSave} 
-            disabled={saving}
-            className="flex-1 rounded-xl h-12 bg-gold-gradient text-primary-foreground font-bold text-lg hover:scale-[1.02] transition-transform"
-          >
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
+          <Button variant="ghost" onClick={onClose} disabled={saving} className="rounded-xl h-10 text-xs">Cancelar</Button>
+          <Button onClick={handleSave} disabled={saving} className="flex-1 rounded-xl h-10 bg-gold-gradient text-primary-foreground font-bold text-sm tracking-wide">
             {saving ? <Loader2 className="animate-spin" /> : "Salvar Configurações"}
           </Button>
         </DialogFooter>

@@ -145,7 +145,8 @@ export async function getTelegramToken(userId?: string): Promise<string | null> 
 }
 
 export async function getProfile(userId?: string): Promise<Perfil | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   const targetId = userId || user?.id;
   if (!targetId) return null;
 
@@ -165,7 +166,8 @@ export async function getProfile(userId?: string): Promise<Perfil | null> {
 }
 
 export async function createProfile(perfil: Omit<Perfil, 'id'>): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   const value = JSON.stringify({ ...perfil, id: user.id });
   await supabase
@@ -174,7 +176,8 @@ export async function createProfile(perfil: Omit<Perfil, 'id'>): Promise<void> {
 }
 
 export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   
   const current = await getProfile(user.id);
@@ -187,7 +190,8 @@ export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
 }
 
 export async function checkSlugAvailability(slug: string): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   const { data, error } = await supabase
     .from('configuracoes')
     .select('user_id, valor')
@@ -208,7 +212,8 @@ export async function checkSlugAvailability(slug: string): Promise<boolean> {
 }
 
 export async function uploadLogo(file: File): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) throw new Error("Usuário não autenticado");
 
   const fileExt = file.name.split('.').pop();
@@ -221,15 +226,16 @@ export async function uploadLogo(file: File): Promise<string> {
 
   if (uploadError) throw uploadError;
 
-  const { data } = supabase.storage
+  const { data: storageData } = supabase.storage
     .from('logos')
     .getPublicUrl(filePath);
 
-  return data.publicUrl;
+  return storageData.publicUrl;
 }
 
 export async function updateTelegramToken(token: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   await supabase
     .from('configuracoes')
@@ -237,7 +243,8 @@ export async function updateTelegramToken(token: string): Promise<void> {
 }
 
 export async function getWebhookStatus(): Promise<boolean> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return false; // If no user, cannot get user-specific webhook status
 
   const { data, error } = await supabase
@@ -252,7 +259,8 @@ export async function getWebhookStatus(): Promise<boolean> {
 }
 
 export async function updateWebhookStatus(active: boolean): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   await supabase
     .from('configuracoes')
@@ -280,7 +288,8 @@ export async function getWorkingHours(userId?: string): Promise<WorkingHours> {
 }
 
 export async function updateWorkingHours(hours: WorkingHours): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   const value = JSON.stringify(hours);
   await supabase
@@ -309,7 +318,8 @@ export async function getVacationMode(userId?: string): Promise<VacationMode> {
 }
 
 export async function updateVacationMode(mode: VacationMode): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   const value = JSON.stringify(mode);
   await supabase
@@ -338,7 +348,8 @@ export async function getTelegramConfig(userId?: string): Promise<TelegramSettin
 }
 
 export async function updateTelegramConfig(settings: TelegramSettings): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   const value = JSON.stringify(settings);
   await supabase
@@ -367,7 +378,8 @@ export async function getTechniques(userId?: string): Promise<string[]> {
 }
 
 export async function updateTechniques(techniques: string[]): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   const value = JSON.stringify(techniques);
   await supabase
@@ -376,7 +388,8 @@ export async function updateTechniques(techniques: string[]): Promise<void> {
 }
 
 export async function updateRecipient(recipient: Recipient): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   const { error } = await supabase
     .from('configuracoes')
@@ -390,8 +403,8 @@ export async function updateRecipient(recipient: Recipient): Promise<void> {
 export async function createRecipient(recipient: Omit<Recipient, 'id'>, userId?: string): Promise<void> {
   let targetUserId = userId;
   if (!targetUserId) {
-    const { data: { user } } = await supabase.auth.getUser();
-    targetUserId = user?.id;
+    const { data: authData } = await supabase.auth.getUser();
+    targetUserId = authData?.user?.id;
   }
   if (!targetUserId) return;
 
@@ -403,7 +416,8 @@ export async function createRecipient(recipient: Omit<Recipient, 'id'>, userId?:
 }
 
 export async function deleteRecipient(id: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   const { error } = await supabase
     .from('configuracoes')
@@ -435,7 +449,8 @@ export async function getClients(userId?: string): Promise<Client[]> {
 }
 
 export async function getClient(id: string): Promise<Client> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) throw new Error("Usuário não autenticado");
 
   const { data, error } = await supabase
@@ -449,12 +464,13 @@ export async function getClient(id: string): Promise<Client> {
   return mapToClient(data);
 }
 
-export async function createClient(data: Omit<Client, 'id'>, userId?: string): Promise<Client> {
-  const payload = mapToDb(data);
+export async function createClient(clientData: Omit<Client, 'id'>, userId?: string): Promise<Client> {
+  const payload = mapToDb(clientData);
   if (userId) {
     payload.user_id = userId;
   } else {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData?.user;
     if (user) {
       payload.user_id = user.id;
     } else {
@@ -472,13 +488,14 @@ export async function createClient(data: Omit<Client, 'id'>, userId?: string): P
   return mapToClient(inserted);
 }
 
-export async function updateClient(id: string, data: Partial<Client>): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+export async function updateClient(id: string, clientData: Partial<Client>): Promise<void> {
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) throw new Error("Usuário não autenticado");
 
   const { error } = await supabase
     .from('agendamentos')
-    .update(mapToDb(data))
+    .update(mapToDb(clientData))
     .eq('id', id)
     .eq('user_id', user.id);
   
@@ -486,7 +503,8 @@ export async function updateClient(id: string, data: Partial<Client>): Promise<v
 }
 
 export async function deleteClient(id: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) throw new Error("Usuário não autenticado");
 
   const { error } = await supabase
@@ -518,14 +536,15 @@ export async function getProfileBySlug(slug: string): Promise<Perfil | null> {
 }
 
 export async function getLastSummaryDate(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return null;
 
   const { data, error } = await supabase
     .from('configuracoes')
     .select('valor')
     .eq('nome', 'SUMMARY_STATE')
-    .eq('user_id', user.id) // Add user_id to the query
+    .eq('user_id', user.id)
     .maybeSingle();
   
   if (error || !data) return null;
@@ -533,7 +552,8 @@ export async function getLastSummaryDate(): Promise<string | null> {
 }
 
 export async function updateLastSummaryDate(dateStr: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user;
   if (!user) return;
   await supabase
     .from('configuracoes')
@@ -542,7 +562,8 @@ export async function updateLastSummaryDate(dateStr: string): Promise<void> {
 
 export async function setTelegramWebhook(token: string, url: string): Promise<boolean> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData?.user;
     const webhookUrl = url ? `${url}/api/telegram/webhook?userId=${user?.id}` : "";
     
     const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {

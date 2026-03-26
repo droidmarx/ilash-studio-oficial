@@ -141,9 +141,70 @@ export async function getTelegramToken(userId?: string): Promise<string | null> 
   }
 
   const { data, error } = await query.maybeSingle();
-  
+  return error || !data ? null : data.valor;
+}
+
+export async function getProfile(userId?: string): Promise<Perfil | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const targetId = userId || user?.id;
+  if (!targetId) return null;
+
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('valor')
+    .eq('nome', 'PERFIL')
+    .eq('user_id', targetId)
+    .maybeSingle();
+
   if (error || !data) return null;
-  return data.valor;
+  try {
+    return JSON.parse(data.valor);
+  } catch {
+    return null;
+  }
+}
+
+export async function createProfile(perfil: Omit<Perfil, 'id'>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const value = JSON.stringify({ ...perfil, id: user.id });
+  await supabase
+    .from('configuracoes')
+    .upsert({ user_id: user.id, nome: 'PERFIL', valor: value }, { onConflict: 'user_id, nome' });
+}
+
+export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  
+  const current = await getProfile(user.id);
+  const updated = { ...current, ...perfil, id: user.id };
+  const value = JSON.stringify(updated);
+  
+  await supabase
+    .from('configuracoes')
+    .upsert({ user_id: user.id, nome: 'PERFIL', valor: value }, { onConflict: 'user_id, nome' });
+}
+
+export async function checkSlugAvailability(slug: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('user_id, valor')
+    .eq('nome', 'PERFIL');
+
+  if (error || !data) return true;
+
+  const isTaken = data.some(item => {
+    try {
+      const p = JSON.parse(item.valor);
+      return p.slug === slug && item.user_id !== user?.id;
+    } catch {
+      return false;
+    }
+  });
+
+  return !isTaken;
 }
 
 export async function uploadLogo(file: File): Promise<string> {

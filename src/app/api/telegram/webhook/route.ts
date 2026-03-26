@@ -70,7 +70,19 @@ export async function POST(request: Request) {
 
     if (!configData || configError) {
       console.warn('[Telegram Webhook] Chat ID não identificado:', chatId);
-      // Opcional: Responder ao usuário informando que o chat não está cadastrado
+      
+      const bt = await getTelegramToken();
+      if (bt) {
+        await fetch(`https://api.telegram.org/bot${bt}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: `❌ <b>Acesso Negado</b>\n\nO Chat ID <code>${chatId}</code> não está registrado no sistema.\n\nPor favor, acesse seu painel administrativo do I Lash Studio, vá em Configurações, adicione este ID na lista de destinatários e <b>clique em Salvar</b> antes de usar os comandos.`,
+            parse_mode: 'HTML',
+          }),
+        });
+      }
       return NextResponse.json({ ok: true });
     }
 

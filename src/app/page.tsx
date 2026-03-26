@@ -55,11 +55,15 @@ import { Toaster } from "@/components/ui/toaster"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 
-import { useAuth } from "@/components/auth/AuthContext"
+import { SetupModal } from "@/components/auth/SetupModal"
+import { getProfile, Perfil } from "@/lib/api"
 
 export default function AgendaPage() {
   const router = useRouter()
   const { user, loading: authLoading, signOut } = useAuth()
+  const [perfil, setPerfil] = useState<Perfil | null>(null)
+  const [isSetupOpen, setIsSetupOpen] = useState(false)
+  
   const { 
     clients,
     loading, 
@@ -94,6 +98,14 @@ export default function AgendaPage() {
       } else {
         setIsAuthorized(true)
         
+        getProfile().then(p => {
+          if (p) {
+            setPerfil(p)
+          } else {
+            setIsSetupOpen(true)
+          }
+        })
+
         const savedTheme = localStorage.getItem('theme') || 'dark'
         setTheme(savedTheme)
         
@@ -305,6 +317,14 @@ export default function AgendaPage() {
 
       <Toaster />
 
+      <SetupModal 
+        isOpen={isSetupOpen} 
+        onComplete={(nome, slug) => {
+          setPerfil({ id: user?.id || "", nome_exibicao: nome, slug })
+          setIsSetupOpen(false)
+        }} 
+      />
+
       <div className="w-full max-w-7xl mx-auto space-y-10">
         
           <header className="text-center space-y-4 mb-12 animate-in fade-in duration-1000">
@@ -313,7 +333,7 @@ export default function AgendaPage() {
           </div>
           <div className="flex flex-col items-center justify-center gap-4 py-8">
             <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-2">
-              I Lash Studio
+              {perfil?.nome_exibicao || "I Lash Studio"}
             </h1>
           </div>
           <div className="flex flex-col items-center gap-1">
@@ -323,6 +343,11 @@ export default function AgendaPage() {
             {user?.user_metadata?.full_name && (
               <p className="text-primary/40 text-[10px] font-bold uppercase tracking-widest mt-2">
                 Bem-vinda de volta, <span className="text-primary/60">{user.user_metadata.full_name}</span>
+              </p>
+            )}
+            {perfil && (
+              <p className="text-xs font-bold text-primary/30 tracking-widest uppercase mt-4">
+                Seu link: <span className="text-primary/50 lowercase">ilash.vercel.app/s/{perfil.slug}</span>
               </p>
             )}
           </div>

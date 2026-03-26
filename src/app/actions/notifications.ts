@@ -9,16 +9,17 @@ import { ptBR } from 'date-fns/locale';
  */
 export async function notifyAppointmentChange(
   bookingData: any,
-  changeType: 'Novo' | 'Alterado'
+  changeType: 'Novo' | 'Alterado',
+  userId?: string
 ) {
-  const botToken = await getTelegramToken();
+  const botToken = await getTelegramToken(userId);
 
   if (!botToken) {
     console.warn('Telegram Bot Token não encontrado.');
     return;
   }
   
-  const allRecipients = await getRecipients();
+  const allRecipients = await getRecipients(userId);
   const recipients = allRecipients.filter(r => 
     !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE'].includes(r.nome) && r.chatID
   );

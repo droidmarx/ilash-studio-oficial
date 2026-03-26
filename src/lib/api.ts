@@ -14,6 +14,12 @@ export interface Recipient {
   chatID: string;
 }
 
+export interface Perfil {
+  id: string;
+  slug: string;
+  nome_exibicao: string;
+}
+
 export interface Anamnese {
   cpf?: string;
   rg?: string;
@@ -100,10 +106,16 @@ export interface Client {
   reminderSent?: boolean;
 }
 
-export async function getRecipients(): Promise<Recipient[]> {
-  const { data, error } = await supabase
+export async function getRecipients(userId?: string): Promise<Recipient[]> {
+  let query = supabase
     .from('configuracoes')
     .select('*');
+  
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
   
   if (error) {
     console.error('Erro ao buscar configurações:', error);
@@ -117,12 +129,17 @@ export async function getRecipients(): Promise<Recipient[]> {
   }));
 }
 
-export async function getTelegramToken(): Promise<string | null> {
-  const { data, error } = await supabase
+export async function getTelegramToken(userId?: string): Promise<string | null> {
+  let query = supabase
     .from('configuracoes')
     .select('valor')
-    .eq('nome', 'SYSTEM_TOKEN')
-    .maybeSingle();
+    .eq('nome', 'SYSTEM_TOKEN');
+  
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query.maybeSingle();
   
   if (error || !data) return null;
   return data.valor;
@@ -158,13 +175,18 @@ export async function updateWebhookStatus(active: boolean): Promise<void> {
     .upsert({ nome: 'WEBHOOK_STATE', valor: value }, { onConflict: 'user_id, nome' });
 }
 
-export async function getWorkingHours(): Promise<WorkingHours> {
+export async function getWorkingHours(userId?: string): Promise<WorkingHours> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('configuracoes')
       .select('valor')
-      .eq('nome', 'WORKING_HOURS')
-      .maybeSingle();
+      .eq('nome', 'WORKING_HOURS');
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.maybeSingle();
     
     if (error || !data) return defaultWorkingHours;
     return JSON.parse(data.valor);
@@ -180,13 +202,18 @@ export async function updateWorkingHours(hours: WorkingHours): Promise<void> {
     .upsert({ nome: 'WORKING_HOURS', valor: value }, { onConflict: 'user_id, nome' });
 }
 
-export async function getVacationMode(): Promise<VacationMode> {
+export async function getVacationMode(userId?: string): Promise<VacationMode> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('configuracoes')
       .select('valor')
-      .eq('nome', 'VACATION_MODE')
-      .maybeSingle();
+      .eq('nome', 'VACATION_MODE');
+    
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.maybeSingle();
     
     if (error || !data) return defaultVacationMode;
     return JSON.parse(data.valor);
@@ -202,13 +229,18 @@ export async function updateVacationMode(mode: VacationMode): Promise<void> {
     .upsert({ nome: 'VACATION_MODE', valor: value }, { onConflict: 'user_id, nome' });
 }
 
-export async function getTelegramConfig(): Promise<TelegramSettings> {
+export async function getTelegramConfig(userId?: string): Promise<TelegramSettings> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('configuracoes')
       .select('valor')
-      .eq('nome', 'TELEGRAM_CONFIG')
-      .maybeSingle();
+      .eq('nome', 'TELEGRAM_CONFIG');
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.maybeSingle();
     
     if (error || !data) return defaultTelegramSettings;
     return JSON.parse(data.valor);
@@ -224,13 +256,18 @@ export async function updateTelegramConfig(settings: TelegramSettings): Promise<
     .upsert({ nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'user_id, nome' });
 }
 
-export async function getTechniques(): Promise<string[]> {
+export async function getTechniques(userId?: string): Promise<string[]> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('configuracoes')
       .select('valor')
-      .eq('nome', 'TECHNIQUES')
-      .maybeSingle();
+      .eq('nome', 'TECHNIQUES');
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.maybeSingle();
     
     if (error || !data) return defaultTechniques;
     return JSON.parse(data.valor);
@@ -297,10 +334,15 @@ export async function getClient(id: string): Promise<Client> {
   return mapToClient(data);
 }
 
-export async function createClient(data: Omit<Client, 'id'>): Promise<Client> {
+export async function createClient(data: Omit<Client, 'id'>, userId?: string): Promise<Client> {
+  const payload = mapToDb(data);
+  if (userId) {
+    payload.user_id = userId;
+  }
+
   const { data: inserted, error } = await supabase
     .from('agendamentos')
-    .insert(mapToDb(data))
+    .insert(payload)
     .select()
     .single();
   
@@ -324,6 +366,51 @@ export async function deleteClient(id: string): Promise<void> {
     .eq('id', id);
   
   if (error) throw error;
+}
+
+export async function getProfile(): Promise<Perfil | null> {
+  const { data, error } = await supabase
+    .from('perfis')
+    .select('*')
+    .maybeSingle();
+  
+  if (error) return null;
+  return data;
+}
+
+export async function getProfileBySlug(slug: string): Promise<Perfil | null> {
+  const { data, error } = await supabase
+    .from('perfis')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle();
+  
+  if (error) return null;
+  return data;
+}
+
+export async function createProfile(perfil: Omit<Perfil, 'id'>): Promise<Perfil> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+
+  const { data, error } = await supabase
+    .from('perfis')
+    .insert({ ...perfil, id: user.id })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function checkSlugAvailability(slug: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('perfis')
+    .select('slug')
+    .eq('slug', slug)
+    .maybeSingle();
+  
+  return !data && !error;
 }
 
 export async function getLastSummaryDate(): Promise<string | null> {

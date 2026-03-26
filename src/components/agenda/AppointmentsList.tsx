@@ -24,8 +24,11 @@ export function AppointmentsList({ appointments, onEdit, loading }: Appointments
 
   const getEventDate = (dataStr: string) => {
     try {
-      if (dataStr.includes('T')) return parseISO(dataStr);
-      return parse(dataStr, 'dd/MM/yyyy HH:mm', new Date());
+      let d;
+      if (dataStr.includes('T')) d = parseISO(dataStr);
+      else d = parse(dataStr, 'dd/MM/yyyy HH:mm', new Date());
+      
+      return isValid(d) ? d : new Date();
     } catch (e) { return new Date(); }
   };
 

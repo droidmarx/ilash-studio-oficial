@@ -34,12 +34,14 @@ export function useAgenda() {
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
-  const safeParseDate = (dataStr: string) => {
-    if (!dataStr) return new Date();
+  const safeParseDate = (dataStr: any) => {
+    if (!dataStr || typeof dataStr !== 'string') return new Date();
     try {
-      if (dataStr.includes('T')) return parseISO(dataStr);
-      if (dataStr.includes('/')) return parse(dataStr, 'dd/MM/yyyy', new Date());
-      const d = new Date(dataStr);
+      let d;
+      if (dataStr.includes('T')) d = parseISO(dataStr);
+      else if (dataStr.includes('/')) d = parse(dataStr, 'dd/MM/yyyy', new Date());
+      else d = new Date(dataStr);
+      
       return isValid(d) ? d : new Date();
     } catch (e) {
       return new Date();

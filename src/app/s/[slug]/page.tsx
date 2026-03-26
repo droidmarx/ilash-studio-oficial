@@ -43,7 +43,7 @@ import {
   Trash2,
   Palmtree
 } from "lucide-react"
-import { format, addDays, eachDayOfInterval, startOfToday } from "date-fns"
+import { format, addDays, eachDayOfInterval, startOfToday, isValid } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import Image from "next/image"
 
@@ -313,7 +313,7 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
           <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
             <p className="text-xs text-primary/60 font-bold uppercase tracking-widest mb-1">Horário Reservado</p>
             <p className="text-lg font-black text-foreground">
-              {formData.data ? format(new Date(formData.data + 'T00:00:00'), "dd 'de' MMMM", { locale: ptBR }) : ''} às {formData.hora}
+              {formData.data && isValid(new Date(formData.data + 'T00:00:00')) ? format(new Date(formData.data + 'T00:00:00'), "dd 'de' MMMM", { locale: ptBR }) : ''} às {formData.hora}
             </p>
           </div>
 

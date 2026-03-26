@@ -15,7 +15,8 @@ import {
   setHours,
   setMinutes,
   addDays,
-  isWithinInterval
+  isWithinInterval,
+  isValid
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CalendarDay } from "@/components/agenda/CalendarDay"
@@ -158,7 +159,11 @@ export default function AgendaPage() {
 
   const gainsData = useMemo(() => {
     const monthlyTotal = clients
-      .filter(c => c.confirmado !== false && isSameMonth(new Date(c.data), currentMonth))
+      .filter(c => {
+        if (!c.data || c.confirmado === false) return false;
+        const d = new Date(c.data);
+        return isValid(d) && isSameMonth(d, currentMonth);
+      })
       .reduce((acc, curr) => acc + parseValue(curr.valor), 0);
 
     const weeklyGains = [];
@@ -172,9 +177,9 @@ export default function AgendaPage() {
       
       const weeklyTotal = clients
         .filter(c => {
-          if (c.confirmado === false) return false;
+          if (!c.data || c.confirmado === false) return false;
           const d = new Date(c.data);
-          return isWithinInterval(d, { start: wStart, end: wEnd });
+          return isValid(d) && isWithinInterval(d, { start: wStart, end: wEnd });
         })
         .reduce((acc, curr) => acc + parseValue(curr.valor), 0);
       

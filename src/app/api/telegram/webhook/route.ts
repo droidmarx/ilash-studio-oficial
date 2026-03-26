@@ -43,6 +43,23 @@ export async function POST(request: Request) {
     const chatId = body.message.chat.id.toString();
     const text = body.message.text.toLowerCase();
 
+    // Comando de diagnóstico universal (independente de cadastro)
+    if (text === '/chatid' || text === '/myid') {
+      const bt = await getTelegramToken();
+      if (bt) {
+        await fetch(`https://api.telegram.org/bot${bt}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: `🔎 <b>Seu Chat ID é:</b>\n\n<code>${chatId}</code>\n\nCopie este número exato e cole na lista de destinatários nas configurações do seu painel!`,
+            parse_mode: 'HTML',
+          }),
+        });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
     // 1. Identifica o userId baseado no chat_id cadastrado em configuracoes
     const { data: configData, error: configError } = await supabase
       .from('configuracoes')

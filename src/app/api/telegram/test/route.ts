@@ -3,15 +3,15 @@ import { getRecipients } from '@/lib/api';
 
 export async function POST(request: Request) {
   try {
-    const { token } = await request.json();
+    const { token, userId } = await request.json();
     
     if (!token) {
       return NextResponse.json({ error: 'Token não fornecido' }, { status: 400 });
     }
 
-    const recipients = await getRecipients();
+    const recipients = await getRecipients(userId);
     const adminRecipients = recipients.filter(r => 
-      !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG'].includes(r.nome) && r.chatID
+      !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'].includes(r.nome) && r.chatID
     );
 
     if (adminRecipients.length === 0) {

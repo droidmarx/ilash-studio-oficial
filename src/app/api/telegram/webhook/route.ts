@@ -20,8 +20,16 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      console.error('[Telegram Webhook] userId não encontrado na URL');
+      return NextResponse.json({ ok: true });
+    }
+
     const body = await request.json();
-    const botToken = await getTelegramToken();
+    const botToken = await getTelegramToken(userId);
 
     if (!botToken || !body.message || !body.message.text) {
       return NextResponse.json({ ok: true });
@@ -30,7 +38,7 @@ export async function POST(request: Request) {
     const chatId = body.message.chat.id;
     const text = body.message.text.toLowerCase();
 
-    const clients = await getClients();
+    const clients = await getClients(userId);
     const nowBrasilia = subHours(new Date(), 3);
 
     let responseMessage = "";

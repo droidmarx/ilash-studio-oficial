@@ -25,9 +25,10 @@ import {
   getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,
   getTelegramConfig, updateTelegramConfig, TelegramSettings, defaultTelegramSettings,
   getTechniques, updateTechniques, defaultTechniques,
-  getProfile, updateProfile, checkSlugAvailability, Perfil
+  getProfile, updateProfile, checkSlugAvailability, Perfil, uploadLogo
 } from "@/lib/api"
 import { ThemeToggle } from "./ThemeToggle"
+import Image from "next/image"
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -44,8 +45,9 @@ export function SettingsModal({
   theme,
   toggleTheme
 }: SettingsModalProps) {
-  const [apiUrl, setApiUrl] = useState("")
   const [botToken, setBotToken] = useState("")
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [isWebhookActive, setIsWebhookActive] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -65,7 +67,6 @@ export function SettingsModal({
 
   useEffect(() => {
     if (isOpen) {
-      setApiUrl(localStorage.getItem("mock_api_url") || DEFAULT_API_URL)
       loadRecipients()
     }
   }, [isOpen])
@@ -163,7 +164,7 @@ export function SettingsModal({
       const res = await fetch('/api/telegram/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: botToken }),
+        body: JSON.stringify({ token: botToken, userId: perfil.id }),
       })
       if (res.ok) {
         toast({ title: "Sucesso", description: "Mensagem de teste enviada para os administradores." })
@@ -179,11 +180,16 @@ export function SettingsModal({
 
   const handleSave = async () => {
     setSaving(true)
-    const normalizedUrl = apiUrl.trim()
-    localStorage.setItem("mock_api_url", normalizedUrl)
     
     try {
-      await updateMainApiUrl(normalizedUrl);
+      let finalLogoUrl = perfil.logo_url;
+      
+      if (logoFile) {
+        setUploadingLogo(true);
+        finalLogoUrl = await uploadLogo(logoFile);
+        setUploadingLogo(false);
+      }
+
       await updateWorkingHours(workingHours);
       await updateVacationMode(vacationMode);
       await updateTelegramConfig(telegramConfig);
@@ -198,7 +204,7 @@ export function SettingsModal({
       for (const remote of remoteRecipients) {
         const isSystemKey = [
           'SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 
-          'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES'
+          'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'
         ].includes(remote.nome);
         
         if (!isSystemKey && !recipients.find(r => r.id === remote.id)) {
@@ -214,14 +220,16 @@ export function SettingsModal({
         }
       }
 
-      if (perfil.nome_exibicao || perfil.slug) {
-        await updateProfile(perfil);
+      const perfilToUpdate = { ...perfil, logo_url: finalLogoUrl };
+      if (perfil.nome_exibicao || perfil.slug || logoFile) {
+        await updateProfile(perfilToUpdate as Perfil);
       }
 
       toast({ title: "Configurações Salvas", description: "Configurações sincronizadas com sucesso." })
       onSave()
       onClose()
     } catch (error) {
+      console.error("Erro ao salvar:", error);
       toast({ variant: "destructive", title: "Erro ao Salvar", description: "Falha ao sincronizar dados." })
     } finally {
       setSaving(false)
@@ -274,16 +282,35 @@ export function SettingsModal({
                 <p className="text-[10px] text-muted-foreground italic">Link atual: ilash-studio-oficial.vercel.app/s/{perfil.slug}</p>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">URL do Logotipo (PNG/JPG)</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="https://suaimagem.com/logo.png"
-                    value={perfil.logo_url || ""} 
-                    onChange={(e) => setPerfil({...perfil, logo_url: e.target.value})}
-                    className="rounded-xl h-12 bg-background border-border"
-                  />
+                <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">Logotipo do Studio</Label>
+                <div className="flex flex-col gap-4">
+                  {perfil.logo_url && (
+                    <div className="relative w-32 h-16 bg-muted/20 rounded-xl overflow-hidden self-center border border-border group">
+                      <Image src={perfil.logo_url} alt="Logo Preview" fill className="object-contain" unoptimized />
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                        className="hidden" 
+                        id="logo-upload"
+                      />
+                      <label 
+                        htmlFor="logo-upload" 
+                        className="flex items-center justify-center gap-2 h-12 w-full px-4 rounded-xl bg-background border border-border hover:border-primary cursor-pointer transition-all"
+                      >
+                        <ImageIcon size={18} className="text-primary" />
+                        <span className="text-sm font-semibold truncate">
+                          {logoFile ? logoFile.name : "Escolher Imagem do Dispositivo"}
+                        </span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground italic">Dica: Use um link de imagem do Google Drive, Dropbox ou Imgur.</p>
+                <p className="text-[10px] text-muted-foreground italic text-center">Recomendado: Logo em PNG sem fundo.</p>
               </div>
             </div>
           </div>
@@ -359,22 +386,6 @@ export function SettingsModal({
             </div>
           </div>
 
-          <Separator className="bg-primary/10" />
-
-          <div className="space-y-4">
-            <Label htmlFor="api-url" className="text-lg font-bold flex items-center gap-2 text-primary">
-              <Globe size={20} />
-              URL Base do MockAPI
-            </Label>
-            <Input
-              id="api-url"
-              placeholder="Ex: https://mockapi.io/projects/..."
-              value={apiUrl}
-              onChange={(e) => setApiUrl(e.target.value)}
-              className="rounded-xl h-12 bg-muted/50 border-border focus:border-primary"
-            />
-            <p className="text-[10px] text-muted-foreground">Essa URL é usada para salvar agendamentos e clientes.</p>
-          </div>
 
           <Separator className="bg-primary/10" />
 

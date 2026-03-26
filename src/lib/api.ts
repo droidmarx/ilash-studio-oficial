@@ -146,6 +146,27 @@ export async function getTelegramToken(userId?: string): Promise<string | null> 
   return data.valor;
 }
 
+export async function uploadLogo(file: File): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+  const filePath = `${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('logos')
+    .upload(filePath, file);
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage
+    .from('logos')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
+
 export async function updateTelegramToken(token: string): Promise<void> {
   await supabase
     .from('configuracoes')
@@ -310,11 +331,17 @@ export async function deleteRecipient(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function getClients(): Promise<Client[]> {
-  const { data, error } = await supabase
+export async function getClients(userId?: string): Promise<Client[]> {
+  let query = supabase
     .from('agendamentos')
     .select('*')
     .order('data', { ascending: true });
+
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
   
   if (error) {
     console.error('Erro ao buscar clientes:', error);
@@ -445,11 +472,13 @@ export async function updateLastSummaryDate(dateStr: string): Promise<void> {
 
 export async function setTelegramWebhook(token: string, url: string): Promise<boolean> {
   try {
-    const finalUrl = url ? `${url}/api/telegram/webhook` : "";
+    const { data: { user } } = await supabase.auth.getUser();
+    const webhookUrl = url ? `${url}/api/telegram/webhook?userId=${user?.id}` : "";
+    
     const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: finalUrl }),
+      body: JSON.stringify({ url: webhookUrl }),
     });
     const result = await response.json();
     return result.ok;

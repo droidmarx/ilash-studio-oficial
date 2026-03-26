@@ -498,96 +498,23 @@ export async function deleteClient(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function getProfile(): Promise<Perfil | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data, error } = await supabase
-    .from('perfis')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle();
-  
-  if (error) {
-    console.error("Erro ao buscar perfil:", error);
-    return null;
-  }
-  
-  // Se não existir, criar um perfil básico para o usuário
-  if (!data) {
-    const newProfile = {
-      id: user.id,
-      slug: `studio-${user.id.substring(0, 5)}`,
-      nome_exibicao: "Meu Novo Studio",
-      logo_url: ""
-    }
-    const { data: created, error: createError } = await supabase
-      .from('perfis')
-      .insert(newProfile)
-      .select()
-      .single();
-    
-    if (createError) {
-      console.error("Erro ao criar perfil inicial:", createError);
-      return null;
-    }
-    return created;
-  }
-
-  return data;
-}
-
 export async function getProfileBySlug(slug: string): Promise<Perfil | null> {
   const { data, error } = await supabase
-    .from('perfis')
-    .select('*')
-    .eq('slug', slug)
-    .maybeSingle();
-  
-  if (error) return null;
-  return data;
-}
+    .from('configuracoes')
+    .select('valor')
+    .eq('nome', 'PERFIL');
 
-export async function createProfile(perfil: Omit<Perfil, 'id'>): Promise<Perfil> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
+  if (error || !data) return null;
 
-  const { data, error } = await supabase
-    .from('perfis')
-    .insert({ ...perfil, id: user.id })
-    .select()
-    .single();
-  
-  if (error) throw error;
-  return data;
-}
-
-export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
-
-  // Removemos o ID do objeto de update para não tentar sobrescrever a PK se já enviada
-  const { id, ...updateData } = perfil as any;
-
-  const { error } = await supabase
-    .from('perfis')
-    .update(updateData)
-    .eq('id', user.id);
-  
-  if (error) {
-    console.error("Erro ao atualizar perfil:", error);
-    throw error;
+  for (const item of data) {
+    try {
+      const p = JSON.parse(item.valor);
+      if (p.slug === slug) return p;
+    } catch {
+      continue;
+    }
   }
-}
-
-export async function checkSlugAvailability(slug: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('perfis')
-    .select('slug')
-    .eq('slug', slug)
-    .maybeSingle();
-  
-  return !data && !error;
+  return null;
 }
 
 export async function getLastSummaryDate(): Promise<string | null> {

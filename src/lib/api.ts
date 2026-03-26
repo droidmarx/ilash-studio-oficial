@@ -175,14 +175,6 @@ export async function updateTelegramToken(token: string): Promise<void> {
     .upsert({ user_id: user.id, nome: 'SYSTEM_TOKEN', valor: token }, { onConflict: 'user_id, nome' });
 }
 
-export async function updateMainApiUrl(url: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase
-    .from('configuracoes')
-    .upsert({ user_id: user.id, nome: 'MAIN_API_URL', valor: url }, { onConflict: 'user_id, nome' });
-}
-
 export async function getWebhookStatus(): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false; // If no user, cannot get user-specific webhook status

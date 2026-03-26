@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
 import { 
   Recipient, getRecipients, createRecipient, updateRecipient, deleteRecipient, 
-  updateTelegramToken, setTelegramWebhook, updateMainApiUrl, DEFAULT_API_URL, 
+  updateTelegramToken, setTelegramWebhook, DEFAULT_API_URL, 
   getWebhookStatus, updateWebhookStatus,
   getWorkingHours, updateWorkingHours, WorkingHours, WorkingDay, defaultWorkingHours,
   getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,

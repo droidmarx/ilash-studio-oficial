@@ -1,88 +1,72 @@
 
 import { NextResponse } from 'next/server';
-import { getClients, getTelegramToken } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { getClients } from '@/lib/api';
 import { 
-  parseISO, 
-  parse, 
-  isValid, 
-  isSameDay, 
-  subHours, 
-  format, 
-  isSameMonth, 
-  startOfWeek, 
-  endOfWeek, 
-  isWithinInterval,
-  addMonths
+  parseISO, parse, isValid, isSameDay, subHours, format, 
+  isSameMonth, startOfWeek, endOfWeek, isWithinInterval, addMonths
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const dynamic = 'force-dynamic';
 
-// Busca o userId pelo token do bot recebido na mensagem
-async function getUserIdByToken(token: string): Promise<string | null> {
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+
+// Identifica qual usuário enviou o comando pelo chatId dele
+async function getUserIdByChatId(chatId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('configuracoes')
     .select('user_id')
-    .eq('nome', 'SYSTEM_TOKEN')
-    .eq('valor', token)
+    .eq('valor', String(chatId))
+    .neq('nome', 'SYSTEM_TOKEN')
+    .neq('nome', 'WORKING_HOURS')
+    .neq('nome', 'VACATION_MODE')
+    .neq('nome', 'TELEGRAM_CONFIG')
+    .neq('nome', 'TECHNIQUES')
+    .neq('nome', 'WEBHOOK_STATE')
+    .neq('nome', 'SUMMARY_STATE')
+    .limit(1)
     .maybeSingle();
-  
+
   if (error || !data) return null;
   return data.user_id;
 }
 
 export async function POST(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    let userId = searchParams.get('userId');
+    if (!BOT_TOKEN) {
+      console.error('[Webhook] TELEGRAM_BOT_TOKEN não configurado no servidor.');
+      return NextResponse.json({ ok: true });
+    }
 
     const body = await request.json();
-    
+
     if (!body.message || !body.message.text) {
       return NextResponse.json({ ok: true });
     }
 
-    // Se não tem userId na URL, tenta descobrir pelo token armazenado
+    const chatId = String(body.message.chat.id);
+    const text = body.message.text.toLowerCase();
+
+    // Identifica o estúdio pelo chat_id de quem enviou
+    const userId = await getUserIdByChatId(chatId);
+
     if (!userId) {
-      // Extrai o token da URL do webhook (não disponível aqui, então busca de outra forma)
-      // Loga o erro mas continua tentando
-      console.warn('[Telegram Webhook] userId não encontrado na URL. Tentando identificar pelo banco de dados...');
-      
-      // Busca todos os tokens e tenta identificar qual bot recebeu a mensagem
-      // usando o bot_id do from field
-      const botId = body.message.from?.is_bot ? null : null; // não está disponível diretamente
-      
-      // Fallback: busca o primeiro usuário com token cadastrado (funciona para instância única)
-      const { data: tokenData } = await supabase
-        .from('configuracoes')
-        .select('user_id')
-        .eq('nome', 'SYSTEM_TOKEN')
-        .limit(1)
-        .maybeSingle();
-      
-      if (tokenData?.user_id) {
-        userId = tokenData.user_id;
-        console.log('[Telegram Webhook] userId identificado:', userId);
-      } else {
-        console.error('[Telegram Webhook] Nenhum token cadastrado no banco');
-        return NextResponse.json({ ok: true });
-      }
-    }
-
-    const botToken = await getTelegramToken(userId ?? undefined);
-
-    if (!botToken) {
-      console.error('[Telegram Webhook] Token não encontrado para userId:', userId);
+      // Chat ID não está cadastrado em nenhum estúdio
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: `⚠️ <b>Chat ID não reconhecido!</b>\n\nSeu Chat ID (<code>${chatId}</code>) não está cadastrado em nenhum estúdio.\n\nPara usar os comandos, cadastre este ID nas configurações do seu estúdio.`,
+          parse_mode: 'HTML'
+        }),
+      });
       return NextResponse.json({ ok: true });
     }
 
-    const chatId = body.message.chat.id;
-    const text = body.message.text.toLowerCase();
-
-    const clients = await getClients(userId ?? undefined);
+    const clients = await getClients(userId);
     const nowBrasilia = subHours(new Date(), 3);
-
     let responseMessage = "";
 
     const parseValue = (val?: string) => {
@@ -90,15 +74,14 @@ export async function POST(request: Request) {
       return parseFloat(val.replace(/[^\d,.-]/g, "").replace(".", "").replace(",", ".")) || 0;
     };
 
-    const getStatusLabel = (confirmed?: boolean) => 
+    const getStatusLabel = (confirmed?: boolean) =>
       confirmed === false ? "⏳ <b>(Pendente)</b>" : "✅ <b>(Confirmado)</b>";
 
-    // LÓGICA 1: /command1 ou /start (Agenda de HOJE)
     if (text.startsWith('/command1') || text.startsWith('/start')) {
-      const todayAppointments = clients.filter(client => {
+      const items = clients.filter(c => {
         try {
-          const appDate = client.data.includes('T') ? parseISO(client.data) : parse(client.data, 'dd/MM/yyyy HH:mm', new Date());
-          return isValid(appDate) && isSameDay(appDate, nowBrasilia);
+          const d = c.data.includes('T') ? parseISO(c.data) : parse(c.data, 'dd/MM/yyyy HH:mm', new Date());
+          return isValid(d) && isSameDay(d, nowBrasilia);
         } catch { return false; }
       }).sort((a, b) => {
         const da = a.data.includes('T') ? parseISO(a.data) : parse(a.data, 'dd/MM/yyyy HH:mm', new Date());
@@ -106,119 +89,80 @@ export async function POST(request: Request) {
         return da.getTime() - db.getTime();
       });
 
-      if (todayAppointments.length > 0) {
-        const total = todayAppointments.reduce((acc, curr) => acc + parseValue(curr.valor), 0);
-        responseMessage = `✨ <b>Agenda VIP - Hoje (${format(nowBrasilia, 'dd/MM')})</b> ✨\n\n` +
-          todayAppointments.map(app => {
+      if (items.length > 0) {
+        const total = items.reduce((acc, c) => acc + parseValue(c.valor), 0);
+        responseMessage = `✨ <b>Agenda VIP — Hoje (${format(nowBrasilia, 'dd/MM')})</b> ✨\n\n` +
+          items.map(app => {
             const time = format(app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date()), 'HH:mm');
-            const status = getStatusLabel(app.confirmado);
-            return `${status}\n⏰ <b>${time}</b> - ${app.nome}\n🎨 ${app.servico}\n💰 R$ ${app.valor || '0,00'}`;
+            return `${getStatusLabel(app.confirmado)}\n⏰ <b>${time}</b> — ${app.nome}\n🎨 ${app.servico}\n💰 R$ ${app.valor || '0,00'}`;
           }).join('\n\n') +
-          `\n\n━━━━━━━━━━━━━━━\n💰 <b>TOTAL HOJE: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>\n\n🚀 <i>Gerenciado via I Lash Studio</i>`;
+          `\n\n━━━━━━━━━━━━━━━\n💰 <b>TOTAL HOJE: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>`;
       } else {
-        responseMessage = `✨ <b>Olá!</b> ✨\n\nVocê não tem agendamentos para hoje (${format(nowBrasilia, 'dd/MM')}).`;
+        responseMessage = `✨ <b>Olá!</b> ✨\n\nNenhum agendamento para hoje (${format(nowBrasilia, 'dd/MM')}).`;
       }
-    } 
-    // LÓGICA 2: /command2 (Agenda do MÊS ATUAL)
-    else if (text.startsWith('/command2')) {
-      const monthAppointments = clients.filter(client => {
+    } else if (text.startsWith('/command2')) {
+      const items = clients.filter(c => {
         try {
-          const appDate = client.data.includes('T') ? parseISO(client.data) : parse(client.data, 'dd/MM/yyyy HH:mm', new Date());
-          return isValid(appDate) && isSameMonth(appDate, nowBrasilia);
+          const d = c.data.includes('T') ? parseISO(c.data) : parse(c.data, 'dd/MM/yyyy HH:mm', new Date());
+          return isValid(d) && isSameMonth(d, nowBrasilia);
         } catch { return false; }
-      }).sort((a, b) => {
-        const da = a.data.includes('T') ? parseISO(a.data) : parse(a.data, 'dd/MM/yyyy HH:mm', new Date());
-        const db = b.data.includes('T') ? parseISO(b.data) : parse(b.data, 'dd/MM/yyyy HH:mm', new Date());
-        return da.getTime() - db.getTime();
       });
-
-      if (monthAppointments.length > 0) {
-        const total = monthAppointments.reduce((acc, curr) => acc + parseValue(curr.valor), 0);
-        const monthName = format(nowBrasilia, 'MMMM', { locale: ptBR });
-        responseMessage = `✨ <b>Agenda VIP - ${monthName}</b> ✨\n\n` +
-          monthAppointments.map(app => {
-            const date = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
-            const dateStr = format(date, 'dd/MM (EEE)', { locale: ptBR });
-            const time = format(date, 'HH:mm');
-            const status = getStatusLabel(app.confirmado);
-            return `${status}\n📅 <b>${dateStr} às ${time}</b>\n👤 ${app.nome}\n🎨 ${app.servico}\n💰 R$ ${app.valor || '0,00'}`;
+      const total = items.reduce((acc, c) => acc + parseValue(c.valor), 0);
+      const monthName = format(nowBrasilia, 'MMMM', { locale: ptBR });
+      responseMessage = items.length > 0
+        ? `✨ <b>Agenda VIP — ${monthName}</b> ✨\n\n` +
+          items.sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime()).map(app => {
+            const d = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
+            return `${getStatusLabel(app.confirmado)}\n📅 <b>${format(d, 'dd/MM (EEE)', { locale: ptBR })} às ${format(d, 'HH:mm')}</b>\n👤 ${app.nome}\n🎨 ${app.servico}\n💰 R$ ${app.valor || '0,00'}`;
           }).join('\n\n') +
-          `\n\n━━━━━━━━━━━━━━━\n💰 <b>TOTAL MÊS: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>`;
-      } else {
-        responseMessage = `✨ <b>Olá!</b> ✨\n\nNão há agendamentos para o mês de ${format(nowBrasilia, 'MMMM', { locale: ptBR })}.`;
-      }
-    }
-    // LÓGICA 3: /command3 (Agenda da SEMANA - Domingo a Sábado)
-    else if (text.startsWith('/command3')) {
+          `\n\n━━━━━━━━━━━━━━━\n💰 <b>TOTAL MÊS: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>`
+        : `Nenhum agendamento para ${monthName}.`;
+    } else if (text.startsWith('/command3')) {
       const weekStart = startOfWeek(nowBrasilia, { weekStartsOn: 0 });
       const weekEnd = endOfWeek(nowBrasilia, { weekStartsOn: 0 });
-      
-      const weekAppointments = clients.filter(client => {
+      const items = clients.filter(c => {
         try {
-          const appDate = client.data.includes('T') ? parseISO(client.data) : parse(client.data, 'dd/MM/yyyy HH:mm', new Date());
-          return isValid(appDate) && isWithinInterval(appDate, { start: weekStart, end: weekEnd });
+          const d = c.data.includes('T') ? parseISO(c.data) : parse(c.data, 'dd/MM/yyyy HH:mm', new Date());
+          return isValid(d) && isWithinInterval(d, { start: weekStart, end: weekEnd });
         } catch { return false; }
-      }).sort((a, b) => {
-        const da = a.data.includes('T') ? parseISO(a.data) : parse(a.data, 'dd/MM/yyyy HH:mm', new Date());
-        const db = b.data.includes('T') ? parseISO(b.data) : parse(b.data, 'dd/MM/yyyy HH:mm', new Date());
-        return da.getTime() - db.getTime();
       });
-
-      if (weekAppointments.length > 0) {
-        const total = weekAppointments.reduce((acc, curr) => acc + parseValue(curr.valor), 0);
-        responseMessage = `✨ <b>Agenda VIP - Esta Semana</b> ✨\n\n` +
-          weekAppointments.map(app => {
-            const date = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
-            const dateStr = format(date, 'dd/MM (EEE)', { locale: ptBR });
-            const time = format(date, 'HH:mm');
-            const status = getStatusLabel(app.confirmado);
-            return `${status}\n📅 <b>${dateStr} às ${time}</b>\n👤 ${app.nome}\n🎨 ${app.servico}\n💰 R$ ${app.valor || '0,00'}`;
+      const total = items.reduce((acc, c) => acc + parseValue(c.valor), 0);
+      responseMessage = items.length > 0
+        ? `✨ <b>Agenda VIP — Esta Semana</b> ✨\n\n` +
+          items.sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime()).map(app => {
+            const d = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
+            return `${getStatusLabel(app.confirmado)}\n📅 <b>${format(d, 'dd/MM (EEE)', { locale: ptBR })} às ${format(d, 'HH:mm')}</b>\n👤 ${app.nome}\n🎨 ${app.servico}\n💰 R$ ${app.valor || '0,00'}`;
           }).join('\n\n') +
-          `\n\n━━━━━━━━━━━━━━━\n💰 <b>TOTAL SEMANA: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>`;
-      } else {
-        responseMessage = `✨ <b>Olá!</b> ✨\n\nNão há agendamentos para esta semana (domingo a sábado).`;
-      }
-    }
-    // LÓGICA 4: /command4 (Agenda do PRÓXIMO MÊS)
-    else if (text.startsWith('/command4')) {
+          `\n\n━━━━━━━━━━━━━━━\n💰 <b>TOTAL SEMANA: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>`
+        : `Nenhum agendamento para esta semana.`;
+    } else if (text.startsWith('/command4')) {
       const nextMonth = addMonths(nowBrasilia, 1);
-      const nextMonthAppointments = clients.filter(client => {
+      const items = clients.filter(c => {
         try {
-          const appDate = client.data.includes('T') ? parseISO(client.data) : parse(client.data, 'dd/MM/yyyy HH:mm', new Date());
-          return isValid(appDate) && isSameMonth(appDate, nextMonth);
+          const d = c.data.includes('T') ? parseISO(c.data) : parse(c.data, 'dd/MM/yyyy HH:mm', new Date());
+          return isValid(d) && isSameMonth(d, nextMonth);
         } catch { return false; }
-      }).sort((a, b) => {
-        const da = a.data.includes('T') ? parseISO(a.data) : parse(a.data, 'dd/MM/yyyy HH:mm', new Date());
-        const db = b.data.includes('T') ? parseISO(b.data) : parse(b.data, 'dd/MM/yyyy HH:mm', new Date());
-        return da.getTime() - db.getTime();
       });
-
-      if (nextMonthAppointments.length > 0) {
-        const total = nextMonthAppointments.reduce((acc, curr) => acc + parseValue(curr.valor), 0);
-        const monthName = format(nextMonth, 'MMMM', { locale: ptBR });
-        responseMessage = `✨ <b>Agenda VIP - ${monthName} (Próx. Mês)</b> ✨\n\n` +
-          nextMonthAppointments.map(app => {
-            const date = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
-            const dateStr = format(date, 'dd/MM (EEE)', { locale: ptBR });
-            const time = format(date, 'HH:mm');
-            const status = getStatusLabel(app.confirmado);
-            return `${status}\n📅 <b>${dateStr} às ${time}</b>\n👤 ${app.nome}\n🎨 ${app.servico}\n💰 R$ ${app.valor || '0,00'}`;
+      const total = items.reduce((acc, c) => acc + parseValue(c.valor), 0);
+      const monthName = format(nextMonth, 'MMMM', { locale: ptBR });
+      responseMessage = items.length > 0
+        ? `✨ <b>Agenda VIP — ${monthName} (Próx. Mês)</b> ✨\n\n` +
+          items.sort((a, b) => parseISO(a.data).getTime() - parseISO(b.data).getTime()).map(app => {
+            const d = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
+            return `${getStatusLabel(app.confirmado)}\n📅 <b>${format(d, 'dd/MM (EEE)', { locale: ptBR })} às ${format(d, 'HH:mm')}</b>\n👤 ${app.nome}\n🎨 ${app.servico}\n💰 R$ ${app.valor || '0,00'}`;
           }).join('\n\n') +
-          `\n\n━━━━━━━━━━━━━━━\n💰 <b>TOTAL PREVISTO: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>`;
-      } else {
-        responseMessage = `✨ <b>Olá!</b> ✨\n\nNão há agendamentos para o próximo mês (${format(nextMonth, 'MMMM', { locale: ptBR })}).`;
-      }
+          `\n\n━━━━━━━━━━━━━━━\n💰 <b>TOTAL PREVISTO: R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>`
+        : `Nenhum agendamento para ${monthName}.`;
+    } else if (text.startsWith('/meuid')) {
+      // Comando de ajuda para o usuário descobrir seu chat_id
+      responseMessage = `🆔 <b>Seu Chat ID é:</b>\n\n<code>${chatId}</code>\n\nCopie este número e cole no campo "Meu Chat ID" nas configurações do seu estúdio.`;
     }
 
     if (responseMessage) {
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: responseMessage,
-          parse_mode: 'HTML',
-        }),
+        body: JSON.stringify({ chat_id: chatId, text: responseMessage, parse_mode: 'HTML' }),
       });
     }
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Settings, Send, MessageSquare, User, Trash2, PlusCircle, Loader2, Key, Bot, XCircle, Sparkles, Clock, Palmtree, RefreshCw, Calendar, Bell, ShieldCheck, Crown } from "lucide-react"
+import { Settings, Send, MessageSquare, User, Trash2, PlusCircle, Loader2, Sparkles, Clock, Palmtree, Calendar, ShieldCheck, Crown, Copy, CheckCircle2, ExternalLink } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -16,17 +16,14 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Separator } from "@/components/ui/separator"
 import { 
-  Recipient, getRecipients, createRecipient, updateRecipient, deleteRecipient, 
-  updateTelegramToken, setTelegramWebhook, DEFAULT_API_URL, 
-  getWebhookStatus, updateWebhookStatus,
+  Recipient, getRecipients, createRecipient, updateRecipient, deleteRecipient,
   getWorkingHours, updateWorkingHours, WorkingHours, WorkingDay, defaultWorkingHours,
   getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,
-  getTelegramConfig, updateTelegramConfig, TelegramSettings, defaultTelegramSettings,
   getTechniques, updateTechniques, defaultTechniques,
-  getProfile, updateProfile, checkSlugAvailability, Perfil
+  getProfile, updateProfile, Perfil
 } from "@/lib/api"
+import { Separator } from "@/components/ui/separator"
 import { ThemeToggle } from "./ThemeToggle"
 
 interface SettingsModalProps {
@@ -44,21 +41,15 @@ export function SettingsModal({
   theme,
   toggleTheme
 }: SettingsModalProps) {
-  const [botToken, setBotToken] = useState("")
   const [recipients, setRecipients] = useState<Recipient[]>([])
-  const [isWebhookActive, setIsWebhookActive] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [webhookLoading, setWebhookLoading] = useState(false)
+  const [testingToken, setTestingToken] = useState(false)
   const [workingHours, setWorkingHours] = useState<WorkingHours>(defaultWorkingHours)
   const [vacationMode, setVacationMode] = useState<VacationMode>(defaultVacationMode)
-  const [telegramConfig, setTelegramConfig] = useState<TelegramSettings>(defaultTelegramSettings)
   const [techniques, setTechniques] = useState<string[]>(defaultTechniques)
   const [newTechnique, setNewTechnique] = useState("")
-  const [testingToken, setTestingToken] = useState(false)
-  
   const [perfil, setPerfil] = useState<Partial<Perfil>>({ nome_exibicao: "", slug: "" })
-  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
   
   const { toast } = useToast()
 
@@ -124,43 +115,9 @@ export function SettingsModal({
     setRecipients(newRecipients)
   }
 
-  const handleToggleWebhook = async () => {
-    if (!botToken) {
-      toast({ variant: "destructive", title: "Erro", description: "Salve o Token do Bot antes de alterar o modo interativo." })
-      return
-    }
-    setWebhookLoading(true)
-    try {
-      const currentUrl = window.location.origin
-      const targetUrl = isWebhookActive ? "" : currentUrl
-      const success = await setTelegramWebhook(botToken.trim(), targetUrl)
-      
-      if (success) {
-        const nextState = !isWebhookActive
-        await updateWebhookStatus(nextState)
-        setIsWebhookActive(nextState)
-        toast({ 
-          title: nextState ? "Bot Ativado!" : "Bot Desativado", 
-          description: nextState ? "Agora seu robô responderá aos comandos /command1, /command2, /command3 e /command4." : "O robô não responderá mais a comandos interativos." 
-        })
-      } else {
-        throw new Error()
-      }
-    } catch (error: any) {
-      console.error("Erro ao ativar webhook:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Falha na Operação", 
-        description: error.message || "Verifique seu Token e tente novamente." 
-      })
-    } finally {
-      setWebhookLoading(false)
-    }
-  }
-
   const handleTestToken = async () => {
-    if (!botToken) {
-      toast({ variant: "destructive", title: "Erro", description: "Informe o Token do Bot primeiro." })
+    if (recipients.length === 0 || !recipients[0]?.chatID) {
+      toast({ variant: "destructive", title: "Erro", description: "Adicione um Chat ID na lista abaixo e salve antes de testar." })
       return
     }
     setTestingToken(true)
@@ -168,50 +125,33 @@ export function SettingsModal({
       const res = await fetch('/api/telegram/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: botToken, userId: perfil.id }),
+        body: JSON.stringify({ userId: perfil.id }),
       })
       const data = await res.json()
       if (res.ok) {
-        toast({ title: "✅ Conexão OK!", description: `Mensagem enviada para ${data.count} destinatário(s) via @${data.botName}.` })
+        toast({ title: "✅ Conectado!", description: `Mensagem enviada com sucesso via @${data.botName}. Verifique seu Telegram!` })
       } else {
-        toast({ 
-          variant: "destructive", 
-          title: "Erro no Teste", 
-          description: data.error || "Verifique seu Token e sua lista de destinatários." 
-        })
+        toast({ variant: "destructive", title: "Erro na Conexão", description: data.error })
       }
-    } catch (error: any) {
-      console.error("Erro no teste do Telegram:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro no Teste", 
-        description: "Falha de conexão com o servidor." 
-      })
+    } catch {
+      toast({ variant: "destructive", title: "Erro", description: "Falha de conexão com o servidor." })
     } finally {
       setTestingToken(false)
     }
   }
 
+
   const handleSave = async () => {
     setSaving(true)
-    
     try {
       await updateWorkingHours(workingHours);
       await updateVacationMode(vacationMode);
-      await updateTelegramConfig(telegramConfig);
       await updateTechniques(techniques);
 
-      if (botToken) {
-        await updateTelegramToken(botToken.trim());
-      }
-
       const remoteRecipients = await getRecipients()
+      const SYSTEM_KEYS = ['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL']
       for (const remote of remoteRecipients) {
-        const isSystemKey = [
-          'SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 
-          'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'
-        ].includes(remote.nome);
-        if (!isSystemKey && !recipients.find(r => r.id === remote.id)) {
+        if (!SYSTEM_KEYS.includes(remote.nome) && !recipients.find(r => r.id === remote.id)) {
           await deleteRecipient(remote.id)
         }
       }
@@ -227,16 +167,11 @@ export function SettingsModal({
         await updateProfile(perfil as Perfil);
       }
 
-      toast({ title: "Configurações Salvas", description: "Configurações sincronizadas com sucesso." })
+      toast({ title: "Configurações Salvas!", description: "Todas as configurações foram sincronizadas." })
       onSave()
       onClose()
     } catch (error: any) {
-      console.error("Erro ao salvar:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro ao Salvar", 
-        description: error.message || "Falha ao sincronizar dados. Verifique se o bucket 'logos' foi criado no Supabase." 
-      })
+      toast({ variant: "destructive", title: "Erro ao Salvar", description: error.message || "Falha ao sincronizar dados." })
     } finally {
       setSaving(false)
     }
@@ -447,71 +382,45 @@ export function SettingsModal({
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="bot-token" className="text-lg font-bold flex items-center gap-2 text-primary">
-                <Key size={20} />
-                Telegram Bot Token
-              </Label>
-              <Button 
-                variant={isWebhookActive ? "destructive" : "outline"}
-                size="sm" 
-                onClick={handleToggleWebhook}
-                disabled={webhookLoading || !botToken}
-                className="rounded-full gap-2 h-8 px-4"
-              >
-                {webhookLoading ? (
-                  <Loader2 className="animate-spin" size={14} />
-                ) : isWebhookActive ? (
-                  <XCircle size={14} />
-                ) : (
-                  <Bot size={14} />
-                )}
-                {isWebhookActive ? "Desativar modo interativo" : "Ativar Bot Interativo"}
-              </Button>
-            </div>
-            <Input
-              id="bot-token"
-              placeholder="Cole aqui o Token do @BotFather"
-              value={botToken}
-              onChange={(e) => setBotToken(e.target.value)}
-              className="rounded-xl h-12 bg-muted/50 border-border focus:border-primary font-mono text-xs"
-            />
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-2 gap-2">
-              <p className="text-[10px] text-muted-foreground leading-tight max-w-[70%]">
-                O bot responde aos comandos <b>/command1</b> (Hoje), <b>/command2</b> (Mês), <b>/command3</b> (Semana) e <b>/command4</b> (Próx. Mês).
-              </p>
-              <Button size="sm" variant="outline" onClick={handleTestToken} disabled={testingToken} className="h-8 text-xs rounded-full gap-2 whitespace-nowrap">
-                {testingToken ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} Testar Token
-              </Button>
+            <Label className="text-lg font-bold flex items-center gap-2 text-primary">
+              <Send size={20} />
+              Notificações via Telegram
+            </Label>
+
+            {/* Guia passo a passo */}
+            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary/70">Como configurar</p>
+              <div className="space-y-2">
+                {[
+                  { step: "1", text: "Abra o Telegram e procure por", link: "@ilashnotificationbot", href: "https://t.me/ilashnotificationbot" },
+                  { step: "2", text: "Clique em Iniciar ou envie", link: "/start", href: null },
+                  { step: "3", text: "Envie o comando", link: "/meuid", href: null },
+                  { step: "4", text: "O bot responderá com seu Chat ID. Cole ele no campo abaixo.", link: null, href: null },
+                ].map(({ step, text, link, href }) => (
+                  <div key={step} className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">{step}</span>
+                    <p className="text-sm text-muted-foreground leading-tight">
+                      {text}{" "}
+                      {link && href ? (
+                        <a href={href} target="_blank" rel="noreferrer" className="text-primary font-mono font-bold hover:underline inline-flex items-center gap-1">
+                          {link} <ExternalLink size={10} />
+                        </a>
+                      ) : link ? (
+                        <code className="text-primary font-bold bg-primary/10 px-1 rounded">{link}</code>
+                      ) : null}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Telegram Settings */}
-            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4 mt-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-bold flex items-center gap-2">
-                    <RefreshCw size={16} className="text-primary" /> Resumo Diário
-                  </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Envia a agenda do dia às 8h</p>
-                </div>
-                <Switch 
-                  checked={telegramConfig.dailySummary} 
-                  onCheckedChange={(c) => setTelegramConfig({...telegramConfig, dailySummary: c})} 
-                />
-              </div>
-              <Separator className="bg-border/50" />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-bold flex items-center gap-2">
-                    <Bell size={16} className="text-primary" /> Aviso 2h Antes
-                  </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Lembra da cliente que está chegando</p>
-                </div>
-                <Switch 
-                  checked={telegramConfig.reminder2h} 
-                  onCheckedChange={(c) => setTelegramConfig({...telegramConfig, reminder2h: c})} 
-                />
-              </div>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-muted-foreground">
+                O bot responde: <code className="text-primary">/command1</code> Hoje · <code className="text-primary">/command2</code> Mês · <code className="text-primary">/command3</code> Semana · <code className="text-primary">/command4</code> Próx. Mês
+              </p>
+              <Button size="sm" variant="outline" onClick={handleTestToken} disabled={testingToken} className="h-8 text-xs rounded-full gap-2 whitespace-nowrap ml-2">
+                {testingToken ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />} Testar
+              </Button>
             </div>
           </div>
 

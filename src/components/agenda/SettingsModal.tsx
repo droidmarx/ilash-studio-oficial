@@ -125,7 +125,11 @@ export function SettingsModal({
         body: JSON.stringify({ userId: perfil.id }),
       })
       if (res.ok) {
-        toast({ title: "Sucesso", description: "Mensagem de teste enviada para os administradores ativos." })
+        const data = await res.json()
+        toast({ 
+          title: "Teste Enviado!", 
+          description: `Enviado para ${data.count} ref(s) via robô @${data.botName}. Confira seu Telegram! Se não chegou, verifique se seu Chat ID numérico está correto e se está olhando o robô certo.` 
+        })
       } else {
         const err = await res.json()
         throw new Error(err.error || "Erro ao testar")

@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       .from('configuracoes')
       .select('user_id')
       .eq('valor', chatId)
+      .limit(1)
       .maybeSingle();
 
     if (!configData || configError) {

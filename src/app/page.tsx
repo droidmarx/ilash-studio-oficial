@@ -55,8 +55,11 @@ import { Toaster } from "@/components/ui/toaster"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
 
+import { useAuth } from "@/components/auth/AuthContext"
+
 export default function AgendaPage() {
   const router = useRouter()
+  const { user, loading: authLoading, signOut } = useAuth()
   const { 
     clients,
     loading, 
@@ -85,27 +88,28 @@ export default function AgendaPage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem("isLoggedIn")
-    if (isLoggedIn !== "true") {
-      router.push("/login")
-      return
-    }
-    setIsAuthorized(true)
+    if (!authLoading) {
+      if (!user) {
+        router.push("/login")
+      } else {
+        setIsAuthorized(true)
+        
+        const savedTheme = localStorage.getItem('theme') || 'dark'
+        setTheme(savedTheme)
+        
+        const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby']
+        document.documentElement.classList.remove(...allThemes)
+        if (savedTheme !== 'light') {
+          document.documentElement.classList.add(savedTheme)
+        }
 
-    const savedTheme = localStorage.getItem('theme') || 'dark'
-    setTheme(savedTheme)
-    
-    const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby']
-    document.documentElement.classList.remove(...allThemes)
-    if (savedTheme !== 'light') {
-      document.documentElement.classList.add(savedTheme)
+        const timer = setTimeout(() => {
+          setShowSplash(false)
+        }, 4000)
+        return () => clearTimeout(timer)
+      }
     }
-
-    const timer = setTimeout(() => {
-      setShowSplash(false)
-    }, 4000)
-    return () => clearTimeout(timer)
-  }, [router])
+  }, [user, authLoading, router])
 
   const toggleTheme = (newTheme: string) => {
     setTheme(newTheme)
@@ -118,8 +122,8 @@ export default function AgendaPage() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("isLoggedIn")
+  const handleLogout = async () => {
+    await signOut()
     router.push("/login")
   }
 
@@ -303,7 +307,7 @@ export default function AgendaPage() {
 
       <div className="w-full max-w-7xl mx-auto space-y-10">
         
-        <header className="text-center space-y-4 mb-12 animate-in fade-in duration-1000">
+          <header className="text-center space-y-4 mb-12 animate-in fade-in duration-1000">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Crown className="text-primary animate-bounce" size={24} />
           </div>
@@ -312,9 +316,16 @@ export default function AgendaPage() {
               I Lash Studio
             </h1>
           </div>
-          <p className="text-primary/70 text-sm md:text-base font-medium tracking-[0.3em] uppercase">
-            Exclusive Client Experience
-          </p>
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-primary/70 text-sm md:text-base font-medium tracking-[0.3em] uppercase">
+              Exclusive Client Experience
+            </p>
+            {user?.user_metadata?.full_name && (
+              <p className="text-primary/40 text-[10px] font-bold uppercase tracking-widest mt-2">
+                Bem-vinda de volta, <span className="text-primary/60">{user.user_metadata.full_name}</span>
+              </p>
+            )}
+          </div>
         </header>
 
         {loading ? (

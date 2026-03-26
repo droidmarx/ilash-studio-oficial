@@ -99,7 +99,9 @@ export function SettingsModal({
       setTechniques(tks)
 
       const p = await getProfile()
-      if (p) setPerfil(p)
+      if (p) {
+        setPerfil(p as Perfil)
+      }
       
     } catch (error) {
       console.error("Erro ao carregar configurações", error)
@@ -147,8 +149,13 @@ export function SettingsModal({
       } else {
         throw new Error()
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Falha na Operação", description: "Verifique seu Token e tente novamente." })
+    } catch (error: any) {
+      console.error("Erro ao ativar webhook:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Falha na Operação", 
+        description: error.message || "Verifique seu Token e tente novamente." 
+      })
     } finally {
       setWebhookLoading(false)
     }
@@ -171,8 +178,13 @@ export function SettingsModal({
       } else {
         throw new Error()
       }
-    } catch {
-      toast({ variant: "destructive", title: "Erro no Teste", description: "Verifique seu Token e sua lista de destinatários." })
+    } catch (error: any) {
+      console.error("Erro no teste do Telegram:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Erro no Teste", 
+        description: error.message || "Verifique seu Token e sua lista de destinatários." 
+      })
     } finally {
       setTestingToken(false)
     }
@@ -228,9 +240,13 @@ export function SettingsModal({
       toast({ title: "Configurações Salvas", description: "Configurações sincronizadas com sucesso." })
       onSave()
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao salvar:", error);
-      toast({ variant: "destructive", title: "Erro ao Salvar", description: "Falha ao sincronizar dados." })
+      toast({ 
+        variant: "destructive", 
+        title: "Erro ao Salvar", 
+        description: error.message || "Falha ao sincronizar dados. Verifique se o bucket 'logos' foi criado no Supabase." 
+      })
     } finally {
       setSaving(false)
     }

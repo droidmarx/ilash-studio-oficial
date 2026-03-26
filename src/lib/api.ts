@@ -168,22 +168,30 @@ export async function uploadLogo(file: File): Promise<string> {
 }
 
 export async function updateTelegramToken(token: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'SYSTEM_TOKEN', valor: token }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: user.id, nome: 'SYSTEM_TOKEN', valor: token }, { onConflict: 'user_id, nome' });
 }
 
 export async function updateMainApiUrl(url: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'MAIN_API_URL', valor: url }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: user.id, nome: 'MAIN_API_URL', valor: url }, { onConflict: 'user_id, nome' });
 }
 
 export async function getWebhookStatus(): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false; // If no user, cannot get user-specific webhook status
+
   const { data, error } = await supabase
     .from('configuracoes')
     .select('valor')
     .eq('nome', 'WEBHOOK_STATE')
+    .eq('user_id', user.id) // Add user_id to the query
     .maybeSingle();
   
   if (error || !data) return false;
@@ -191,10 +199,11 @@ export async function getWebhookStatus(): Promise<boolean> {
 }
 
 export async function updateWebhookStatus(active: boolean): Promise<void> {
-  const value = active ? 'ACTIVE' : 'INACTIVE';
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'WEBHOOK_STATE', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: user.id, nome: 'WEBHOOK_STATE', valor: active ? 'ACTIVE' : 'INACTIVE' }, { onConflict: 'user_id, nome' });
 }
 
 export async function getWorkingHours(userId?: string): Promise<WorkingHours> {
@@ -218,10 +227,12 @@ export async function getWorkingHours(userId?: string): Promise<WorkingHours> {
 }
 
 export async function updateWorkingHours(hours: WorkingHours): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const value = JSON.stringify(hours);
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'WORKING_HOURS', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: user.id, nome: 'WORKING_HOURS', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getVacationMode(userId?: string): Promise<VacationMode> {
@@ -245,10 +256,12 @@ export async function getVacationMode(userId?: string): Promise<VacationMode> {
 }
 
 export async function updateVacationMode(mode: VacationMode): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const value = JSON.stringify(mode);
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'VACATION_MODE', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: user.id, nome: 'VACATION_MODE', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getTelegramConfig(userId?: string): Promise<TelegramSettings> {
@@ -272,10 +285,12 @@ export async function getTelegramConfig(userId?: string): Promise<TelegramSettin
 }
 
 export async function updateTelegramConfig(settings: TelegramSettings): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const value = JSON.stringify(settings);
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: user.id, nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getTechniques(userId?: string): Promise<string[]> {
@@ -299,34 +314,49 @@ export async function getTechniques(userId?: string): Promise<string[]> {
 }
 
 export async function updateTechniques(techniques: string[]): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const value = JSON.stringify(techniques);
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'TECHNIQUES', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: user.id, nome: 'TECHNIQUES', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function updateRecipient(recipient: Recipient): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const { error } = await supabase
     .from('configuracoes')
     .update({ nome: recipient.nome, valor: recipient.chatID })
-    .eq('id', recipient.id);
+    .eq('id', recipient.id)
+    .eq('user_id', user.id);
   
   if (error) throw error;
 }
 
-export async function createRecipient(recipient: Omit<Recipient, 'id'>): Promise<void> {
+export async function createRecipient(recipient: Omit<Recipient, 'id'>, userId?: string): Promise<void> {
+  let targetUserId = userId;
+  if (!targetUserId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    targetUserId = user?.id;
+  }
+  if (!targetUserId) return;
+
   const { error } = await supabase
     .from('configuracoes')
-    .insert({ nome: recipient.nome, valor: recipient.chatID });
+    .insert({ user_id: targetUserId, nome: recipient.nome, valor: recipient.chatID });
   
   if (error) throw error;
 }
 
 export async function deleteRecipient(id: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const { error } = await supabase
     .from('configuracoes')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', user.id);
   
   if (error) throw error;
 }
@@ -352,10 +382,14 @@ export async function getClients(userId?: string): Promise<Client[]> {
 }
 
 export async function getClient(id: string): Promise<Client> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+
   const { data, error } = await supabase
     .from('agendamentos')
     .select('*')
     .eq('id', id)
+    .eq('user_id', user.id)
     .single();
   
   if (error) throw error;
@@ -366,6 +400,13 @@ export async function createClient(data: Omit<Client, 'id'>, userId?: string): P
   const payload = mapToDb(data);
   if (userId) {
     payload.user_id = userId;
+  } else {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      payload.user_id = user.id;
+    } else {
+      throw new Error("Usuário não autenticado e userId não fornecido");
+    }
   }
 
   const { data: inserted, error } = await supabase
@@ -379,30 +420,67 @@ export async function createClient(data: Omit<Client, 'id'>, userId?: string): P
 }
 
 export async function updateClient(id: string, data: Partial<Client>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+
   const { error } = await supabase
     .from('agendamentos')
     .update(mapToDb(data))
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', user.id);
   
   if (error) throw error;
 }
 
 export async function deleteClient(id: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+
   const { error } = await supabase
     .from('agendamentos')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', user.id);
   
   if (error) throw error;
 }
 
 export async function getProfile(): Promise<Perfil | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
   const { data, error } = await supabase
     .from('perfis')
     .select('*')
+    .eq('id', user.id)
     .maybeSingle();
   
-  if (error) return null;
+  if (error) {
+    console.error("Erro ao buscar perfil:", error);
+    return null;
+  }
+  
+  // Se não existir, criar um perfil básico para o usuário
+  if (!data) {
+    const newProfile = {
+      id: user.id,
+      slug: `studio-${user.id.substring(0, 5)}`,
+      nome_exibicao: "Meu Novo Studio",
+      logo_url: ""
+    }
+    const { data: created, error: createError } = await supabase
+      .from('perfis')
+      .insert(newProfile)
+      .select()
+      .single();
+    
+    if (createError) {
+      console.error("Erro ao criar perfil inicial:", createError);
+      return null;
+    }
+    return created;
+  }
+
   return data;
 }
 
@@ -435,12 +513,18 @@ export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Usuário não autenticado");
 
+  // Removemos o ID do objeto de update para não tentar sobrescrever a PK se já enviada
+  const { id, ...updateData } = perfil as any;
+
   const { error } = await supabase
     .from('perfis')
-    .update(perfil)
+    .update(updateData)
     .eq('id', user.id);
   
-  if (error) throw error;
+  if (error) {
+    console.error("Erro ao atualizar perfil:", error);
+    throw error;
+  }
 }
 
 export async function checkSlugAvailability(slug: string): Promise<boolean> {
@@ -454,10 +538,14 @@ export async function checkSlugAvailability(slug: string): Promise<boolean> {
 }
 
 export async function getLastSummaryDate(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
   const { data, error } = await supabase
     .from('configuracoes')
     .select('valor')
     .eq('nome', 'SUMMARY_STATE')
+    .eq('user_id', user.id) // Add user_id to the query
     .maybeSingle();
   
   if (error || !data) return null;
@@ -465,9 +553,11 @@ export async function getLastSummaryDate(): Promise<string | null> {
 }
 
 export async function updateLastSummaryDate(dateStr: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   await supabase
     .from('configuracoes')
-    .upsert({ nome: 'SUMMARY_STATE', valor: dateStr }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: user.id, nome: 'SUMMARY_STATE', valor: dateStr }, { onConflict: 'user_id, nome' });
 }
 
 export async function setTelegramWebhook(token: string, url: string): Promise<boolean> {

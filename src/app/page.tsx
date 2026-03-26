@@ -57,6 +57,7 @@ import Image from "next/image"
 
 import { SetupModal } from "@/components/auth/SetupModal"
 import { getProfile, Perfil } from "@/lib/api"
+import { useAuth } from "@/components/auth/AuthContext"
 
 export default function AgendaPage() {
   const router = useRouter()

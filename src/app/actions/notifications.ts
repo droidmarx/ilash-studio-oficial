@@ -1,6 +1,7 @@
 'use server';
 
-import { getRecipients, getTelegramToken } from '@/lib/api';
+import { getTelegramToken } from '@/lib/api';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -19,10 +20,12 @@ export async function notifyAppointmentChange(
     return;
   }
   
-  const allRecipients = await getRecipients(userId);
-  const recipients = allRecipients.filter(r => 
-    !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE'].includes(r.nome) && r.chatID
-  );
+  // Busca destinatários diretamente com o client Admin para bypassar RLS
+  const { data: configData } = await supabaseAdmin.from('configuracoes').select('*').eq('user_id', userId);
+  const allRecipients = configData ? configData.map((item: any) => ({ id: item.id, nome: item.nome, chatID: item.valor })) : [];
+  
+  const SYSTEM_KEYS = ['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'];
+  const recipients = allRecipients.filter(r => !SYSTEM_KEYS.includes(r.nome) && r.chatID);
 
   if (recipients.length === 0) return;
 

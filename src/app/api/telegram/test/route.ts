@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getRecipients, getTelegramToken } from '@/lib/api';
-
+import { getTelegramToken } from '@/lib/api';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 export async function POST(request: Request) {
   try {
     const { userId } = await request.json();
@@ -23,8 +23,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Busca destinatários configurados para este usuário
-    const recipients = await getRecipients(userId);
+    // 2. Busca destinatários configurados para este usuário ignorando RLS
+    const { data: configData } = await supabaseAdmin.from('configuracoes').select('*').eq('user_id', userId);
+    const recipients = configData ? configData.map((item: any) => ({ id: item.id, nome: item.nome, chatID: item.valor })) : [];
+    
     const SYSTEM_KEYS = ['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'];
     const adminRecipients = recipients.filter(r => !SYSTEM_KEYS.includes(r.nome) && r.chatID?.trim());
 

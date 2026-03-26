@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getClients, getTelegramToken, getRecipients, updateClient, getLastSummaryDate, updateLastSummaryDate, getTelegramConfig, defaultTelegramSettings } from '@/lib/api';
+import { getTelegramToken, defaultTelegramSettings } from '@/lib/api';
 import { addHours, subMinutes, addMinutes, parseISO, isWithinInterval, format, parse, isValid, subHours, isSameDay } from 'date-fns';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,11 +26,28 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'Bot Token global não configurado' });
     }
 
-    // 1. Busca todos os agendamentos
-    const allClients = await getClients();
+    // Define mapper para manter localmente
+    const mapToClient = (db: any) => ({
+      id: db.id,
+      nome: db.nome,
+      data: db.data,
+      servico: db.servico,
+      tipo: db.tipo,
+      valor: db.valor,
+      confirmado: db.confirmado,
+      reminderSent: db.reminder_sent,
+      user_id: db.user_id
+    });
+
+    // 1. Busca todos os agendamentos via Admin
+    const { data: clientsData, error: clientsError } = await supabaseAdmin.from('agendamentos').select('*');
+    if (clientsError) {
+      return NextResponse.json({ error: 'Erro ao buscar clientes' }, { status: 500 });
+    }
+    const allClients = clientsData.map(mapToClient);
     
-    // 2. Busca todas as configurações de todos os usuários
-    const { data: allConfigs, error: configsError } = await supabase
+    // 2. Busca todas as configurações via Admin
+    const { data: allConfigs, error: configsError } = await supabaseAdmin
       .from('configuracoes')
       .select('*');
 
@@ -102,7 +119,7 @@ export async function GET(request: Request) {
           }
           
           // Atualiza SUMMARY_STATE para este usuário
-          await supabase
+          await supabaseAdmin
             .from('configuracoes')
             .upsert({ user_id: userId, nome: 'SUMMARY_STATE', valor: todayStr }, { onConflict: 'user_id, nome' });
         }
@@ -135,7 +152,9 @@ export async function GET(request: Request) {
             });
             if (res.ok) sent = true;
           }
-          if (sent) await updateClient(app.id, { reminderSent: true });
+          if (sent) {
+            await supabaseAdmin.from('agendamentos').update({ reminder_sent: true }).eq('id', app.id);
+          }
         }
       }
     }

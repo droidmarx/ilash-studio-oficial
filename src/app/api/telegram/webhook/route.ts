@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
-import { getClients, getTelegramToken } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
+import { getTelegramToken } from '@/lib/api';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { 
   parseISO, 
   parse, 
@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 
 // Busca o userId pelo token do bot recebido na mensagem
 async function getUserIdByToken(token: string): Promise<string | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('configuracoes')
     .select('user_id')
     .eq('nome', 'SYSTEM_TOKEN')
@@ -60,8 +60,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // 1. Identifica o userId baseado no chat_id cadastrado em configuracoes
-    const { data: configData, error: configError } = await supabase
+    // 1. Identifica o userId baseado no chat_id cadastrado em configuracoes ignorando RLS
+    const { data: configData, error: configError } = await supabaseAdmin
       .from('configuracoes')
       .select('user_id')
       .eq('valor', chatId)
@@ -97,7 +97,31 @@ export async function POST(request: Request) {
     }
 
 
-    const clients = await getClients(userId ?? undefined);
+    // Define mapper para manter a compatibilidade
+    const mapToClient = (db: any) => ({
+      id: db.id,
+      nome: db.nome,
+      data: db.data,
+      servico: db.servico,
+      tipo: db.tipo,
+      valor: db.valor,
+      valorAplicacao: db.valor_aplicacao,
+      valorManutencao: db.valor_manutencao,
+      valorRemocao: db.valor_remocao,
+      whatsapp: db.whatsapp,
+      observacoes: db.observacoes,
+      aniversario: db.aniversario,
+      isUnifiedValue: db.is_unified_value,
+      unifiedValue: db.unified_value,
+      confirmado: db.confirmado,
+      reminderSent: db.reminder_sent,
+      anamnese: db.anamnese,
+      servicosAdicionais: db.servicos_adicionais
+    });
+
+    const { data: clientsData } = await supabaseAdmin.from('agendamentos').select('*').eq('user_id', userId).order('data', { ascending: true });
+    const clients = clientsData ? clientsData.map(mapToClient) : [];
+
     const nowBrasilia = subHours(new Date(), 3);
 
     let responseMessage = "";

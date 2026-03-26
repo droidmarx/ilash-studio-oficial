@@ -18,6 +18,7 @@ export interface Perfil {
   id: string;
   slug: string;
   nome_exibicao: string;
+  logo_url?: string;
 }
 
 export interface Anamnese {
@@ -401,6 +402,18 @@ export async function createProfile(perfil: Omit<Perfil, 'id'>): Promise<Perfil>
   
   if (error) throw error;
   return data;
+}
+
+export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+
+  const { error } = await supabase
+    .from('perfis')
+    .update(perfil)
+    .eq('id', user.id);
+  
+  if (error) throw error;
 }
 
 export async function checkSlugAvailability(slug: string): Promise<boolean> {

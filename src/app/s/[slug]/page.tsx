@@ -326,8 +326,22 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
     <div className="min-h-screen py-10 px-4 md:px-8 bg-background/50 backdrop-blur-[2px]">
       <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <header className="text-center space-y-4 pt-20 pb-8">
-          <Crown className="text-primary mx-auto" size={40} />
-          <h1 className="text-6xl font-headline text-gold-gradient py-2 italic">{perfil.nome_exibicao}</h1>
+          <div className="flex flex-col items-center justify-center gap-4 animate-float-luxury">
+            {perfil.logo_url ? (
+              <div className="relative w-48 h-24 mb-4">
+                <Image 
+                  src={perfil.logo_url} 
+                  alt={perfil.nome_exibicao} 
+                  fill 
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            ) : (
+              <Crown className="text-primary mx-auto" size={40} />
+            )}
+            <h1 className="text-6xl font-headline text-gold-gradient py-2 italic">{perfil.nome_exibicao}</h1>
+          </div>
           <p className="text-primary/70 text-[10px] font-bold tracking-[0.5em] uppercase">Agendamento Online</p>
         </header>
 

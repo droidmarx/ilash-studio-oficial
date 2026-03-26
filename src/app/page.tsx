@@ -329,18 +329,30 @@ export default function AgendaPage() {
       <div className="w-full max-w-7xl mx-auto space-y-10">
         
           <header className="text-center space-y-4 mb-12 animate-in fade-in duration-1000">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Crown className="text-primary animate-bounce" size={24} />
-          </div>
-          <div className="flex flex-col items-center justify-center gap-4 py-8">
-            <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-2">
-              {perfil?.nome_exibicao || "I Lash Studio"}
-            </h1>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <p className="text-primary/70 text-sm md:text-base font-medium tracking-[0.3em] uppercase">
-              Exclusive Client Experience
-            </p>
+            <div className="flex flex-col items-center justify-center gap-4 py-8">
+              {perfil?.logo_url ? (
+                <div className="relative w-48 h-24 mb-4">
+                  <Image 
+                    src={perfil.logo_url} 
+                    alt={perfil.nome_exibicao} 
+                    fill 
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Crown className="text-primary animate-bounce" size={24} />
+                </div>
+              )}
+              <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-2 uppercase italic tracking-tighter">
+                {perfil?.nome_exibicao || "I Lash Studio"}
+              </h1>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-primary/70 text-sm md:text-base font-medium tracking-[0.3em] uppercase">
+                Exclusive Client Experience
+              </p>
             {user?.user_metadata?.full_name && (
               <p className="text-primary/40 text-[10px] font-bold uppercase tracking-widest mt-2">
                 Bem-vinda de volta, <span className="text-primary/60">{user.user_metadata.full_name}</span>
@@ -348,7 +360,7 @@ export default function AgendaPage() {
             )}
             {perfil && (
               <p className="text-xs font-bold text-primary/30 tracking-widest uppercase mt-4">
-                Seu link: <span className="text-primary/50 lowercase">ilash.vercel.app/s/{perfil.slug}</span>
+                Seu link: <span className="text-primary/50 lowercase">ilash-studio-oficial.vercel.app/s/{perfil.slug}</span>
               </p>
             )}
           </div>

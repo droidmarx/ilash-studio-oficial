@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Settings, Globe, Send, MessageSquare, Info, User, Trash2, PlusCircle, Loader2, Key, Bot, CheckCircle, XCircle, Sparkles, Clock, Palmtree, RefreshCw, Calendar, Bell, ShieldCheck, RotateCw, Link2 } from "lucide-react"
+import { Settings, Globe, Send, MessageSquare, Info, User, Trash2, PlusCircle, Loader2, Key, Bot, CheckCircle, XCircle, Sparkles, Clock, Palmtree, RefreshCw, Calendar, Bell, ShieldCheck, RotateCw, Link2, Crown, Image as ImageIcon } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,8 @@ import {
   getWorkingHours, updateWorkingHours, WorkingHours, WorkingDay, defaultWorkingHours,
   getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,
   getTelegramConfig, updateTelegramConfig, TelegramSettings, defaultTelegramSettings,
-  getTechniques, updateTechniques, defaultTechniques
+  getTechniques, updateTechniques, defaultTechniques,
+  getProfile, updateProfile, checkSlugAvailability, Perfil
 } from "@/lib/api"
 import { ThemeToggle } from "./ThemeToggle"
 
@@ -56,6 +57,10 @@ export function SettingsModal({
   const [techniques, setTechniques] = useState<string[]>(defaultTechniques)
   const [newTechnique, setNewTechnique] = useState("")
   const [testingToken, setTestingToken] = useState(false)
+  
+  const [perfil, setPerfil] = useState<Partial<Perfil>>({ nome_exibicao: "", slug: "" })
+  const [slugStatus, setSlugStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  
   const { toast } = useToast()
 
   useEffect(() => {
@@ -91,13 +96,16 @@ export function SettingsModal({
 
       const tks = await getTechniques()
       setTechniques(tks)
+
+      const p = await getProfile()
+      if (p) setPerfil(p)
       
     } catch (error) {
-      console.error("Erro ao carregar destinatários", error)
+      console.error("Erro ao carregar configurações", error)
     } finally {
       setLoading(false)
     }
-  }
+}
 
   const handleAddRecipient = () => {
     if (recipients.length >= 3) return
@@ -206,6 +214,10 @@ export function SettingsModal({
         }
       }
 
+      if (perfil.nome_exibicao || perfil.slug) {
+        await updateProfile(perfil);
+      }
+
       toast({ title: "Configurações Salvas", description: "Configurações sincronizadas com sucesso." })
       onSave()
       onClose()
@@ -230,6 +242,54 @@ export function SettingsModal({
         </DialogHeader>
 
         <div className="space-y-8 py-6">
+          <div className="space-y-4">
+            <Label className="text-lg font-bold flex items-center gap-2 text-primary">
+              <Crown size={20} />
+              Identidade do Studio
+            </Label>
+            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">Nome de Exibição</Label>
+                <Input 
+                  value={perfil.nome_exibicao} 
+                  onChange={(e) => setPerfil({...perfil, nome_exibicao: e.target.value})}
+                  className="rounded-xl h-12 bg-background border-border"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">Link do Agendamento</Label>
+                <div className="flex gap-2">
+                  <div className="flex-1 flex items-center bg-background border border-border rounded-xl px-3 h-12">
+                   <span className="text-xs text-muted-foreground mr-1">/s/</span>
+                   <input 
+                      value={perfil.slug} 
+                      onChange={(e) => {
+                        const s = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                        setPerfil({...perfil, slug: s})
+                      }}
+                      className="bg-transparent border-none outline-none text-sm flex-1"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">Link atual: ilash-studio-oficial.vercel.app/s/{perfil.slug}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">URL do Logotipo (PNG/JPG)</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="https://suaimagem.com/logo.png"
+                    value={perfil.logo_url || ""} 
+                    onChange={(e) => setPerfil({...perfil, logo_url: e.target.value})}
+                    className="rounded-xl h-12 bg-background border-border"
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">Dica: Use um link de imagem do Google Drive, Dropbox ou Imgur.</p>
+              </div>
+            </div>
+          </div>
+
+          <Separator className="bg-primary/10" />
+
           <div className="space-y-4">
             <Label className="text-lg font-bold flex items-center gap-2 text-primary">
               <Sparkles size={20} />

@@ -121,7 +121,7 @@ export function SetupModal({ isOpen, onComplete }: SetupModalProps) {
                 </div>
               </div>
               <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest px-1">
-                Seu link será: ilash.vercel.app/s/{slug || "..."}
+                Seu link será: ilash-studio-oficial.vercel.app/s/{slug || "..."}
               </p>
             </div>
           </div>

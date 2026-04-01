@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getClients, createClient, updateClient, deleteClient, Client, logAction } from '@/lib/api';
+import { getClients, createClient, updateClient, deleteClient, Client } from '@/lib/api';
+import { logAction } from '@/app/actions/audit';
 import { addMonths, subMonths, isSameDay, parse, isValid, getMonth, getDate, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { sendTelegramNotification } from '@/app/actions/notifications';

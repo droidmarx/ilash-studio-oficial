@@ -57,7 +57,7 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 
 import { SetupModal } from "@/components/auth/SetupModal"
-import { getProfile, Perfil } from "@/lib/api"
+import { getProfile, updateProfile, Perfil } from "@/lib/api"
 import { useAuth } from "@/components/auth/AuthContext"
 
 export default function AgendaPage() {
@@ -106,7 +106,6 @@ export default function AgendaPage() {
             // Sincroniza Avatar do Google (PASSO 11)
             const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
             if (googleAvatar && p.avatar_url !== googleAvatar) {
-              const { updateProfile } = require("@/lib/api");
               updateProfile({ avatar_url: googleAvatar });
             }
           } else {

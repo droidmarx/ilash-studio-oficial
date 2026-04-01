@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getClients, createClient, updateClient, deleteClient, Client } from '@/lib/api';
+import { getClients, createClient, updateClient, deleteClient, Client, logAction } from '@/lib/api';
 import { addMonths, subMonths, isSameDay, parse, isValid, getMonth, getDate, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { notifyAppointmentChange } from '@/app/actions/notifications';
+import { sendTelegramNotification } from '@/app/actions/notifications';
+import { useAuth } from '@/components/auth/AuthContext';
 import { parseBirthday } from '@/lib/utils';
 
 export function useAgenda() {
+  const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -84,7 +86,7 @@ export function useAgenda() {
     try {
       const newClient = await createClient(data);
       toast({ title: "Sucesso", description: "Agendamento criado!" });
-      await notifyAppointmentChange(newClient, 'Novo');
+      await sendTelegramNotification({ tipo: 'Novo', cliente: newClient, userId: user?.id });
       await fetchClients(false);
     } catch (error) {
       toast({ variant: "destructive", title: "Erro", description: "Falha ao criar agendamento." });
@@ -95,11 +97,30 @@ export function useAgenda() {
   const editAppointment = async (id: string, data: Partial<Client>) => {
     setLoading(true);
     try {
-      await updateClient(id, data);
+      const oldData = clients.find(c => c.id === id);
+      const updated = await updateClient(id, data);
+      
+      if (user) {
+        await logAction({
+          user_id: user.id,
+          acao: data.confirmado === true && oldData?.confirmado !== true ? 'Confirmação' : 'Atualização',
+          cliente_id: id,
+          antes: oldData,
+          depois: updated,
+          detalhes: { campos: Object.keys(data).join(', ') }
+        });
+      }
+
       toast({ title: "Sucesso", description: "Atualizado!" });
-      const updatedData = clients.find(c => c.id === id);
-      if (updatedData) {
-        await notifyAppointmentChange({ ...updatedData, ...data }, 'Alterado');
+      if (oldData) {
+        const type = (data.confirmado === true && oldData.confirmado !== true) ? 'Confirmado' : 'Alterado';
+        await sendTelegramNotification({
+          tipo: type,
+          cliente: updated,
+          antes: oldData,
+          depois: updated,
+          userId: user?.id
+        });
       }
       await fetchClients(false);
     } catch (error) {
@@ -111,7 +132,19 @@ export function useAgenda() {
   const removeAppointment = async (id: string) => {
     setLoading(true);
     try {
+      const clientToRemove = clients.find(c => c.id === id);
       await deleteClient(id);
+
+      if (user && clientToRemove) {
+        await logAction({
+          user_id: user.id,
+          acao: 'Remoção',
+          cliente_id: id,
+          antes: clientToRemove,
+          detalhes: 'Agendamento removido'
+        });
+      }
+
       toast({ title: "Excluído", description: "Agendamento removido com sucesso." });
       if (typeof window !== 'undefined') {
         window.location.reload();

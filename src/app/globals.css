@@ -28,6 +28,7 @@
     
     --gold-grad: linear-gradient(to right, #b76e79, #f2bdcd, #e29a86, #f7c5b6); /* Rose Gold Grad */
     --sparkle-opacity: 0.6;
+    --font-family: 'Poppins', sans-serif;
   }
 
   .dark {
@@ -298,5 +299,6 @@
 }
 
  body {
-  @apply bg-background text-foreground min-h-screen selection:bg-primary/30 font-body transition-colors duration-500;
+  @apply bg-background text-foreground min-h-screen selection:bg-primary/30 transition-colors duration-500;
+  font-family: var(--font-family);
 }

@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Settings, Send, MessageSquare, User, Trash2, PlusCircle, Loader2, Key, Bot, XCircle, Sparkles, Clock, Palmtree, RefreshCw, Calendar, Bell, ShieldCheck, Crown, Check } from "lucide-react"
+import { Settings, Send, MessageSquare, User, Trash2, PlusCircle, Loader2, Key, Bot, XCircle, Sparkles, Clock, Palmtree, RefreshCw, Calendar, Bell, ShieldCheck, Crown, Check, MessageCircle, Type } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabase"
 import {
   Dialog,
   DialogContent,
@@ -78,7 +80,7 @@ export function SettingsModal({
   theme,
   toggleTheme
 }: SettingsModalProps) {
-// const [botToken, setBotToken] = useState("") (Removido: o token agora é global no servidor)
+  const [activeTab, setActiveTab] = useState("studio")
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -88,6 +90,11 @@ export function SettingsModal({
   const [techniques, setTechniques] = useState<string[]>(defaultTechniques)
   const [newTechnique, setNewTechnique] = useState("")
   const [testingToken, setTestingToken] = useState(false)
+  const [fontFamily, setFontFamily] = useState("Poppins")
+  const [customMessages, setCustomMessages] = useState({
+    confirmacao: "Olá {nome}! Confirmamos seu horário para {servico} no dia {data} às {hora}. Te esperamos!",
+    lembrete: "Oi {nome}! Passando para lembrar do seu horário de {servico} amanhã, {data}, às {hora}."
+  })
   
   const [perfil, setPerfil] = useState<Partial<Perfil>>({ nome_exibicao: "", slug: "" })
   const { toast } = useToast()
@@ -125,6 +132,12 @@ export function SettingsModal({
 
       const p = await getProfile()
       if (p) setPerfil(p as Perfil)
+
+      const { data: configs } = await (supabase as any).from('configuracoes').select('nome, valor').in('nome', ['FONT_FAMILY', 'CUSTOM_MESSAGES'])
+      configs?.forEach((c: any) => {
+        if (c.nome === 'FONT_FAMILY') setFontFamily(c.valor)
+        if (c.nome === 'CUSTOM_MESSAGES') setCustomMessages(JSON.parse(c.valor))
+      })
       
     } catch (error) {
       console.error("Erro ao carregar configurações", error)
@@ -134,7 +147,7 @@ export function SettingsModal({
   }
 
   const handleAddRecipient = () => {
-    if (recipients.length >= 3) return
+    if (recipients.length >= 5) return
     setRecipients([...recipients, { id: 'temp-' + Date.now(), nome: "", chatID: "" }])
   }
 
@@ -212,6 +225,11 @@ export function SettingsModal({
         await updateProfile(p);
       }
 
+      await (supabase as any).from('configuracoes').upsert([
+        { user_id: p.id, nome: 'FONT_FAMILY', valor: fontFamily },
+        { user_id: p.id, nome: 'CUSTOM_MESSAGES', valor: JSON.stringify(customMessages) }
+      ], { onConflict: 'user_id, nome' })
+
       toast({ title: "Configurações Salvas", description: "Configurações sincronizadas com sucesso." })
       onSave()
       onClose()
@@ -236,207 +254,148 @@ export function SettingsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-8 py-6">
-          {/* Sessão: Identidade */}
-          <div className="space-y-4">
-            <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-              <Crown size={20} /> Identidade do Studio
-            </Label>
-            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">Nome de Exibição</Label>
-                <Input 
-                  value={perfil.nome_exibicao} 
-                  onChange={(e) => setPerfil({...perfil, nome_exibicao: e.target.value})}
-                  className="rounded-xl h-12 bg-background border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">Link do Agendamento</Label>
-                <div className="flex gap-2">
-                  <div className="flex-1 flex items-center bg-background border border-border rounded-xl px-3 h-12">
-                   <span className="text-xs text-muted-foreground mr-1">/s/</span>
-                   <input 
-                      value={perfil.slug} 
-                      onChange={(e) => {
-                        const s = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-                        setPerfil({...perfil, slug: s})
-                      }}
-                      className="bg-transparent border-none outline-none text-sm flex-1"
-                    />
-                  </div>
-                </div>
-                <p className="text-[10px] text-muted-foreground italic">Link atual: ilash-studio-oficial.vercel.app/s/{perfil.slug}</p>
-              </div>
-            </div>
-          </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid grid-cols-4 bg-muted/50 p-1 rounded-2xl mb-8">
+            <TabsTrigger value="studio" className="rounded-xl gap-2 h-10"><Crown size={16} /> <span className="hidden md:inline">Studio</span></TabsTrigger>
+            <TabsTrigger value="agenda" className="rounded-xl gap-2 h-10"><Calendar size={16} /> <span className="hidden md:inline">Agenda</span></TabsTrigger>
+            <TabsTrigger value="robo" className="rounded-xl gap-2 h-10"><Bot size={16} /> <span className="hidden md:inline">Robô</span></TabsTrigger>
+            <TabsTrigger value="estilo" className="rounded-xl gap-2 h-10"><Sparkles size={16} /> <span className="hidden md:inline">Estilo</span></TabsTrigger>
+          </TabsList>
 
-          <Separator className="bg-primary/10" />
-
-          {/* Sessão: Aparência e Técnicas */}
-          <div className="space-y-6">
+          <TabsContent value="studio" className="space-y-6 outline-none">
             <div className="space-y-4">
-              <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-                <Sparkles size={20} /> Aparência e Serviços
-              </Label>
-              <div className="flex items-center justify-between bg-muted/30 p-4 rounded-2xl border border-border">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-bold">Modo Escuro</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-tight">Alternar entre tema claro e escuro</p>
+              <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Identidade</Label>
+              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase">Nome do Estúdio</Label>
+                  <Input value={perfil.nome_exibicao} onChange={(e) => setPerfil({...perfil, nome_exibicao: e.target.value})} className="rounded-xl bg-background" />
                 </div>
-                <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase">Slug do Link</Label>
+                  <Input value={perfil.slug} onChange={(e) => setPerfil({...perfil, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})} className="rounded-xl bg-background" />
+                </div>
               </div>
             </div>
-            
-            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {techniques.map((tech, index) => (
-                  <div key={index} className="flex items-center gap-2 bg-background border border-border shadow-sm rounded-full px-3 py-1.5 text-sm font-semibold">
-                    <span>{tech}</span>
-                    <button onClick={() => setTechniques(techniques.filter((_, i) => i !== index))} className="text-muted-foreground hover:text-destructive">
-                      <XCircle size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-2 h-10">
-                <Input 
-                  placeholder="Nova técnica..." 
-                  value={newTechnique}
-                  onChange={(e) => setNewTechnique(e.target.value)}
-                  className="h-full rounded-xl bg-background border-border text-xs flex-1"
-                />
-                <Button 
-                  onClick={() => {
-                    if (newTechnique.trim() && !techniques.includes(newTechnique.trim())) {
-                      setTechniques([...techniques, newTechnique.trim()]);
-                      setNewTechnique("");
-                    }
-                  }}
-                  disabled={!newTechnique.trim()}
-                  className="h-full rounded-xl px-4 text-xs font-bold"
-                >
-                  <PlusCircle size={14} /> Add
-                </Button>
+
+            <div className="space-y-4">
+              <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Especialidades</Label>
+              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {techniques.map((tech, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-background border border-border rounded-full px-3 py-1 text-xs font-semibold">
+                      {tech}
+                      <button onClick={() => setTechniques(techniques.filter((_, i) => i !== index))}><XCircle size={12} /></button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input placeholder="Adicionar técnica..." value={newTechnique} onChange={(e) => setNewTechnique(e.target.value)} className="rounded-xl bg-background h-10" />
+                  <Button onClick={() => { if (newTechnique.trim()) { setTechniques([...techniques, newTechnique.trim()]); setNewTechnique("") } }} size="sm" className="rounded-xl px-4">Add</Button>
+                </div>
               </div>
             </div>
-          </div>
+          </TabsContent>
 
-          <Separator className="bg-primary/10" />
-
-          {/* Sessão: Agenda e Notificações */}
-          <div className="space-y-6">
-            <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-              <Calendar size={20} /> Agenda e Notificações
-            </Label>
-            
-            {/* Modo Férias */}
-            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+          <TabsContent value="agenda" className="space-y-6 outline-none">
+            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-6">
               <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-bold flex items-center gap-2">
-                    <Palmtree size={16} className="text-primary" /> Modo Férias
-                  </p>
-                </div>
-                <Switch 
-                  checked={vacationMode.active} 
-                  onCheckedChange={(c) => setVacationMode({...vacationMode, active: c})} 
-                />
+                <Label className="font-bold flex items-center gap-2"><Palmtree size={18} /> Modo Férias</Label>
+                <Switch checked={vacationMode.active} onCheckedChange={(c) => setVacationMode({...vacationMode, active: c})} />
               </div>
               {vacationMode.active && (
-                <Textarea 
-                  value={vacationMode.message}
-                  onChange={(e) => setVacationMode({...vacationMode, message: e.target.value})}
-                  className="resize-none h-16 rounded-xl bg-background border-border text-xs"
-                />
+                <Textarea value={vacationMode.message} onChange={(e) => setVacationMode({...vacationMode, message: e.target.value})} className="rounded-xl bg-background" placeholder="Mensagem de ausência..." />
               )}
-            </div>
-
-            {/* Configurações do Robô */}
-            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-bold flex items-center gap-2">
-                    <RefreshCw size={16} className="text-primary" /> Resumo Diário (8h)
-                  </p>
-                </div>
-                <Switch 
-                  checked={telegramConfig.dailySummary} 
-                  onCheckedChange={(c) => setTelegramConfig({...telegramConfig, dailySummary: c})} 
-                />
-              </div>
+              
               <Separator className="bg-border/50" />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-bold flex items-center gap-2">
-                    <Bell size={16} className="text-primary" /> Aviso 2h Antes
-                  </p>
-                </div>
-                <Switch 
-                  checked={telegramConfig.reminder2h} 
-                  onCheckedChange={(c) => setTelegramConfig({...telegramConfig, reminder2h: c})} 
-                />
-              </div>
-            </div>
-
-            {/* Horário de Trabalho */}
-            <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-3">
-              <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">Horário de Atendimento</Label>
-              <div className="space-y-2">
+              
+              <Label className="text-xs font-bold uppercase tracking-widest text-primary/60">Horários de Atendimento</Label>
+              <div className="grid grid-cols-1 gap-2">
                 {['seg','ter','qua','qui','sex','sab','dom'].map(k => {
                   const day = k as keyof WorkingHours;
-                  const dayMap: Record<string, string> = { seg: 'Seg', ter: 'Ter', qua: 'Qua', qui: 'Qui', sex: 'Sex', sab: 'Sab', dom: 'Dom' };
                   return (
-                    <div key={k} className="flex items-center gap-3">
-                      <div className="flex items-center gap-2 w-16">
-                        <Switch checked={workingHours[day].active} onCheckedChange={(c) => setWorkingHours({...workingHours, [day]: {...workingHours[day], active: c}})} />
-                        <span className="text-[10px] font-bold">{dayMap[k]}</span>
+                    <div key={k} className="flex items-center justify-between text-xs p-2 bg-background/50 rounded-lg">
+                      <div className="flex items-center gap-2 w-20">
+                        <Switch checked={workingHours[day].active} onCheckedChange={(c) => setWorkingHours({...workingHours, [day]: {...workingHours[day], active: c}})} scale={0.8} />
+                        <span className="font-bold uppercase opacity-60">{k}</span>
                       </div>
-                      <Input type="time" value={workingHours[day].start} onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], start: e.target.value}})} disabled={!workingHours[day].active} className="h-7 text-[10px] px-2 rounded-lg bg-background w-16" />
-                      <span className="text-[10px] text-muted-foreground">até</span>
-                      <Input type="time" value={workingHours[day].end} onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], end: e.target.value}})} disabled={!workingHours[day].active} className="h-7 text-[10px] px-2 rounded-lg bg-background w-16" />
+                      <div className="flex items-center gap-2">
+                        <Input type="time" value={workingHours[day].start} onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], start: e.target.value}})} disabled={!workingHours[day].active} className="h-7 w-20 text-[10px] rounded-md" />
+                        <span>-</span>
+                        <Input type="time" value={workingHours[day].end} onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], end: e.target.value}})} disabled={!workingHours[day].active} className="h-7 w-20 text-[10px] rounded-md" />
+                      </div>
                     </div>
                   )
                 })}
               </div>
             </div>
-          </div>
+          </TabsContent>
 
-          <Separator className="bg-primary/10" />
-
-          {/* Sessão: Destinatários */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-bold flex items-center gap-2 text-primary">
-                <Send size={20} /> Destinatários de Alerta
-              </Label>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={handleTestToken} disabled={testingToken || !recipients.some(r => r.chatID?.trim())} className="h-8 text-[10px] rounded-full gap-2">
-                  {testingToken ? <Loader2 size={10} className="animate-spin" /> : <ShieldCheck size={10} />} Testar
-                </Button>
-                <Button size="sm" variant="ghost" onClick={handleAddRecipient} disabled={recipients.length >= 3 || loading} className="text-primary hover:bg-primary/10 h-8 gap-1 text-[10px]">
-                  <PlusCircle size={14} /> Add
-                </Button>
+          <TabsContent value="robo" className="space-y-6 outline-none">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Destinatários Telegram (Bot: @ilashnotificationbot)</Label>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={handleTestToken} disabled={testingToken} className="h-8 rounded-full text-[10px]">Testar</Button>
+                  <Button size="sm" onClick={handleAddRecipient} disabled={recipients.length >= 5} className="h-8 rounded-full text-[10px]">Add</Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {recipients.map((r, i) => (
+                  <div key={r.id} className="flex gap-2 bg-muted/30 p-2 rounded-xl items-center">
+                    <Input placeholder="Nome" value={r.nome} onChange={(e) => handleUpdateRecipientField(i, 'nome', e.target.value)} className="h-8 text-[10px] bg-background" />
+                    <Input placeholder="Chat ID" value={r.chatID} onChange={(e) => handleUpdateRecipientField(i, 'chatID', e.target.value)} className="h-8 text-[10px] bg-background" />
+                    <Button variant="ghost" size="icon" onClick={() => handleRemoveRecipient(i)} className="h-8 w-8 text-destructive"><Trash2 size={14} /></Button>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="space-y-2">
-              {loading ? (
-                <div className="flex justify-center p-4 text-primary"><Loader2 className="animate-spin" /></div>
-              ) : recipients.map((r, index) => (
-                <div key={r.id} className="bg-muted/30 p-3 rounded-xl border border-border space-y-2 relative group">
-                  <button onClick={() => handleRemoveRecipient(index)} className="absolute top-1.5 right-1.5 text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Trash2 size={12} />
-                  </button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input placeholder="Nome" value={r.nome} onChange={(e) => handleUpdateRecipientField(index, 'nome', e.target.value)} className="h-8 text-[10px] bg-background border-border" />
-                    <Input placeholder="Chat ID" value={r.chatID} onChange={(e) => handleUpdateRecipientField(index, 'chatID', e.target.value)} className="h-8 text-[10px] bg-background border-border" />
-                  </div>
+            <div className="space-y-4">
+              <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Templates WhatsApp</Label>
+              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold">Confirmação</Label>
+                  <Textarea value={customMessages.confirmacao} onChange={(e) => setCustomMessages({...customMessages, confirmacao: e.target.value})} className="text-xs h-20 rounded-xl bg-background" />
                 </div>
-              ))}
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold">Lembrete</Label>
+                  <Textarea value={customMessages.lembrete} onChange={(e) => setCustomMessages({...customMessages, lembrete: e.target.value})} className="text-xs h-20 rounded-xl bg-background" />
+                </div>
+                <p className="text-[9px] text-muted-foreground italic">Use: {'{nome}'}, {'{servico}'}, {'{data}'}, {'{hora}'}</p>
+              </div>
             </div>
-          </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="estilo" className="space-y-6 outline-none">
+            <div className="space-y-4">
+              <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Tema do Sistema</Label>
+              <div className="bg-muted/30 p-4 rounded-2xl border border-border flex items-center justify-between">
+                <span className="text-sm font-semibold">Paleta de Cores</span>
+                <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Tipografia Global</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  "Poppins", "Playfair Display", "Lora", "Montserrat", "Raleway", 
+                  "Roboto", "Open Sans", "Oswald", "Inter", "Cinzel"
+                ].map(font => (
+                  <Button 
+                    key={font}
+                    variant={fontFamily === font ? "default" : "outline"}
+                    onClick={() => setFontFamily(font)}
+                    className={cn("rounded-xl h-12 text-sm justify-start gap-3", fontFamily === font && "bg-gold-gradient")}
+                    style={{ fontFamily: font }}
+                  >
+                    <Type size={16} /> {font}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-4">
           <Button variant="ghost" onClick={onClose} disabled={saving} className="rounded-xl h-10 text-xs">Cancelar</Button>

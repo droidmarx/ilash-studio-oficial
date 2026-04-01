@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { supabaseAdmin } from './supabaseAdmin';
 
 export const DEFAULT_API_URL = '';
 export const SETTINGS_API_URL = '';
@@ -601,4 +602,36 @@ function mapToDb(client: any): any {
   if (client.anamnese !== undefined) db.anamnese = client.anamnese;
   if (client.servicosAdicionais !== undefined) db.servicos_adicionais = client.servicosAdicionais;
   return db;
+}
+
+export async function logAction(data: {
+  user_id: string;
+  acao: string;
+  cliente_id: string;
+  detalhes: any;
+  antes?: any;
+  depois?: any;
+}) {
+  const { error } = await supabaseAdmin
+    .from('logs_acoes')
+    .insert([{
+      ...data,
+      data: new Date().toISOString()
+    }]);
+  
+  if (error) console.error("Erro ao registrar log:", error);
+
+  // Enviar para Telegram também (PASSO 8)
+  try {
+    const { sendTelegramNotification } = await import('@/app/actions/notifications');
+    await sendTelegramNotification({
+      tipo: data.acao === 'Remoção' ? 'Removido' : (data.acao === 'Confirmação' ? 'Confirmado' : 'Alterado'),
+      cliente: data.depois || data.antes,
+      antes: data.antes,
+      depois: data.depois,
+      userId: data.user_id
+    });
+  } catch (e) {
+    console.error("Erro ao enviar log para Telegram:", e);
+  }
 }

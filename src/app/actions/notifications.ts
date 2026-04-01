@@ -6,22 +6,29 @@ import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 /**
- * Server Action para notificar mudanças na agenda (Criação ou Edição).
+ * Função central para notificações Telegram (PROMPT CIRÚRGICO)
  */
-export async function notifyAppointmentChange(
-  bookingData: any,
-  changeType: 'Novo' | 'Alterado',
-  userId?: string
-) {
+export async function sendTelegramNotification({ 
+  tipo, 
+  cliente, 
+  antes, 
+  depois,
+  userId 
+}: { 
+  tipo: 'Novo' | 'Alterado' | 'Removido' | 'Confirmado', 
+  cliente: any, 
+  antes?: any, 
+  depois?: any,
+  userId?: string 
+}) {
   const botToken = await getTelegramToken(userId);
+  if (!botToken) return;
 
-  if (!botToken) {
-    console.warn('Telegram Bot Token não encontrado.');
-    return;
-  }
-  
-  // Busca destinatários diretamente com o client Admin para bypassar RLS
+  // Busca dados do estúdio e destinatários
   const { data: configData } = await supabaseAdmin.from('configuracoes').select('*').eq('user_id', userId);
+  const { data: profile } = await supabaseAdmin.from('perfis').select('nome_exibicao').eq('id', userId).maybeSingle();
+  
+  const studioName = profile?.nome_exibicao || "I Lash Studio";
   const allRecipients = configData ? configData.map((item: any) => ({ id: item.id, nome: item.nome, chatID: item.valor })) : [];
   
   const SYSTEM_KEYS = ['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'];
@@ -29,33 +36,41 @@ export async function notifyAppointmentChange(
 
   if (recipients.length === 0) return;
 
-  // Tenta parsear a data para um formato amigável
-  let dateStr = bookingData.data || '';
-  let timeStr = '';
+  // Formatação de data/hora
+  const formatDateTime = (iso?: string) => {
+    if (!iso) return '---';
+    try {
+      const date = parseISO(iso);
+      return format(date, "dd/MM/yyyy HH:mm", { locale: ptBR });
+    } catch { return iso; }
+  };
 
-  try {
-    const dateObj = bookingData.data?.includes('T') ? parseISO(bookingData.data) : new Date();
-    if (isValid(dateObj)) {
-      dateStr = format(dateObj, "dd/MM/yyyy", { locale: ptBR });
-      timeStr = format(dateObj, "HH:mm");
+  const actionEmoji = {
+    'Novo': '✨',
+    'Alterado': '🔄',
+    'Removido': '🗑️',
+    'Confirmado': '✅'
+  }[tipo] || '🔔';
+
+  let message = `👤 <b>${studioName}</b>\n\n`;
+  message += `${actionEmoji} <b>Ação:</b> Cliente ${tipo.toLowerCase()}\n`;
+  message += `👥 <b>Cliente:</b> ${cliente.nome}\n\n`;
+
+  if (tipo === 'Alterado' && antes && depois) {
+    if (antes.data !== depois.data) {
+      message += `🕒 <b>Antes:</b> ${formatDateTime(antes.data)}\n`;
+      message += `🕒 <b>Depois:</b> ${formatDateTime(depois.data)}\n\n`;
     }
-  } catch (e) {
-    console.error('Erro ao formatar data para notificação', e);
+    if (antes.servico !== depois.servico) {
+      message += `🎨 <b>Serviço anterior:</b> ${antes.servico}\n`;
+      message += `🎨 <b>Novo serviço:</b> ${depois.servico}\n\n`;
+    }
+  } else {
+    message += `📅 <b>Data/Hora:</b> ${formatDateTime(cliente.data)}\n`;
+    message += `🎨 <b>Serviço:</b> ${cliente.servico}\n`;
   }
 
-  const statusEmoji = changeType === 'Novo' ? '✨' : '🔄';
-  const confirmedLabel = bookingData.confirmado === false ? "⏳ <b>Pendente</b>" : "✅ <b>Confirmado</b>";
-
-  const message = `${statusEmoji} <b>Agendamento ${changeType}!</b> ${statusEmoji}\n\n` +
-    `👤 <b>Cliente:</b> ${bookingData.nome}\n` +
-    `📌 <b>Status:</b> ${confirmedLabel}\n` +
-    `📱 <b>WhatsApp:</b> ${bookingData.whatsapp || 'Não informado'}\n` +
-    `🎨 <b>Serviço:</b> ${bookingData.servico || 'Não informado'}\n` +
-    `🛠️ <b>Tipo:</b> ${bookingData.tipo || 'Não informado'}\n` +
-    `📅 <b>Data:</b> ${dateStr}\n` +
-    `⏰ <b>Hora:</b> ${timeStr}\n\n` +
-    `💰 <b>Valor:</b> R$ ${bookingData.valor || '0,00'}\n` +
-    `🚀 <i>Gerenciado via I Lash Studio</i>`;
+  message += `\n⏰ <b>Data:</b> ${format(new Date(), "dd/MM/yyyy HH:mm")}`;
 
   for (const recipient of recipients) {
     try {
@@ -72,4 +87,15 @@ export async function notifyAppointmentChange(
       console.error(`Erro ao notificar admin ${recipient.nome}:`, error);
     }
   }
+}
+
+/**
+ * Legado: Mantido para compatibilidade enquanto migramos triggers
+ */
+export async function notifyAppointmentChange(bookingData: any, changeType: 'Novo' | 'Alterado', userId?: string) {
+  return sendTelegramNotification({ 
+    tipo: changeType, 
+    cliente: bookingData, 
+    userId 
+  });
 }

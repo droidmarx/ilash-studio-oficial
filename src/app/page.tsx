@@ -24,6 +24,8 @@ import { SettingsModal } from "@/components/agenda/SettingsModal"
 import { AppointmentForm } from "@/components/agenda/AppointmentForm"
 import { AppointmentsList } from "@/components/agenda/AppointmentsList"
 import { ClientsManager } from "@/components/agenda/ClientsManager"
+import { WhatsAppFAB } from "@/components/agenda/WhatsAppFAB"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -110,6 +112,13 @@ export default function AgendaPage() {
         const savedTheme = localStorage.getItem('theme') || 'dark'
         setTheme(savedTheme)
         
+        // Carrega Fonte Dinâmica (PASSO 10)
+        supabase.from('configuracoes').select('valor').eq('nome', 'FONT_FAMILY').maybeSingle().then(({ data }) => {
+          if (data?.valor) {
+            document.documentElement.style.setProperty('--font-family', data.valor);
+          }
+        });
+
         const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby']
         document.documentElement.classList.remove(...allThemes)
         if (savedTheme !== 'light') {
@@ -353,13 +362,33 @@ export default function AgendaPage() {
               <p className="text-primary/70 text-sm md:text-base font-medium tracking-[0.3em] uppercase">
                 Exclusive Client Experience
               </p>
-            {user?.user_metadata?.full_name && (
-              <p className="text-primary/40 text-[10px] font-bold uppercase tracking-widest mt-2">
-                Bem-vinda de volta, <span className="text-primary/60">{user.user_metadata.full_name}</span>
-              </p>
+            {user && (
+              <div className="flex flex-col items-center mt-6 animate-in fade-in zoom-in duration-700">
+                <div className="relative w-16 h-16 rounded-full p-1 bg-gold-gradient mb-3 shadow-xl">
+                  {user.user_metadata?.avatar_url ? (
+                    <Image 
+                      src={user.user_metadata.avatar_url} 
+                      alt="Perfil" 
+                      width={64} 
+                      height={64} 
+                      className="rounded-full object-cover border-2 border-background"
+                    />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-xl font-bold">
+                      {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <p className="text-primary/80 text-xs font-black uppercase tracking-widest">
+                  {user.user_metadata?.full_name || 'Profissional I Lash'}
+                </p>
+                <p className="text-primary/40 text-[9px] font-medium lowercase tracking-tighter">
+                  {user.email}
+                </p>
+              </div>
             )}
             {perfil && (
-              <p className="text-xs font-bold text-primary/30 tracking-widest uppercase mt-4">
+              <p className="text-[10px] font-bold text-primary/30 tracking-widest uppercase mt-4">
                 Seu link: <span className="text-primary/50 lowercase">ilash-studio-oficial.vercel.app/s/{perfil.slug}</span>
               </p>
             )}
@@ -526,6 +555,8 @@ export default function AgendaPage() {
         theme={theme}
         toggleTheme={toggleTheme}
       />
+
+      <WhatsAppFAB />
     </div>
   )
 }

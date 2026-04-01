@@ -10,9 +10,10 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Client } from "@/lib/api"
-import { generateWhatsAppMessage } from "@/lib/utils"
 import { MessageSquare, Zap, RotateCw, Trash2, Star } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabase"
+import { useState, useEffect } from "react"
 
 interface ReminderDialogProps {
   client: Client | null
@@ -21,11 +22,36 @@ interface ReminderDialogProps {
 }
 
 export function ReminderDialog({ client, isOpen, onClose }: ReminderDialogProps) {
+  const [templates, setTemplates] = useState<any>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      supabase.from('configuracoes').select('valor').eq('nome', 'CUSTOM_MESSAGES').maybeSingle().then(({ data }) => {
+        if (data?.valor) setTemplates(JSON.parse(data.valor))
+      })
+    }
+  }, [isOpen])
+
   if (!client) return null
 
   const handleSend = (tipo: string) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const message = generateWhatsAppMessage(client, tipo, origin);
+    let message = ""
+    const dateStr = client.data ? new Date(client.data).toLocaleDateString('pt-BR') : ""
+    const timeStr = client.data ? new Date(client.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ""
+
+    if (templates) {
+      const template = tipo === 'CONFIRMACAO' ? templates.confirmacao : templates.lembrete
+      message = template
+        .replace(/{nome}/g, client.nome)
+        .replace(/{servico}/g, client.servico || "")
+        .replace(/{data}/g, dateStr)
+        .replace(/{hora}/g, timeStr)
+    } else {
+      message = tipo === 'CONFIRMACAO' 
+        ? `Olá ${client.nome}! Confirmamos seu horário para ${client.servico} no dia ${dateStr} às ${timeStr}.`
+        : `Oi ${client.nome}! Passando para lembrar do seu horário de ${client.servico} amanhã, ${dateStr}, às ${timeStr}.`
+    }
+
     const cleanPhone = client.whatsapp?.replace(/\D/g, "") || "";
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");

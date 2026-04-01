@@ -91,10 +91,6 @@ export function SettingsModal({
   const [newTechnique, setNewTechnique] = useState("")
   const [testingToken, setTestingToken] = useState(false)
   const [fontFamily, setFontFamily] = useState("Poppins")
-  const [customMessages, setCustomMessages] = useState({
-    confirmacao: "Olá {nome}! Confirmamos seu horário para {servico} no dia {data} às {hora}. Te esperamos!",
-    lembrete: "Oi {nome}! Passando para lembrar do seu horário de {servico} amanhã, {data}, às {hora}."
-  })
   
   const [perfil, setPerfil] = useState<Partial<Perfil>>({ nome_exibicao: "", slug: "" })
   const { toast } = useToast()
@@ -133,11 +129,8 @@ export function SettingsModal({
       const p = await getProfile()
       if (p) setPerfil(p as Perfil)
 
-      const { data: configs } = await (supabase as any).from('configuracoes').select('nome, valor').in('nome', ['FONT_FAMILY', 'CUSTOM_MESSAGES'])
-      configs?.forEach((c: any) => {
-        if (c.nome === 'FONT_FAMILY') setFontFamily(c.valor)
-        if (c.nome === 'CUSTOM_MESSAGES') setCustomMessages(JSON.parse(c.valor))
-      })
+      const { data: configs } = await (supabase as any).from('configuracoes').select('nome, valor').eq('nome', 'FONT_FAMILY').maybeSingle()
+      if (configs?.valor) setFontFamily(configs.valor)
       
     } catch (error) {
       console.error("Erro ao carregar configurações", error)
@@ -225,10 +218,7 @@ export function SettingsModal({
         await updateProfile(p);
       }
 
-      await (supabase as any).from('configuracoes').upsert([
-        { user_id: p.id, nome: 'FONT_FAMILY', valor: fontFamily },
-        { user_id: p.id, nome: 'CUSTOM_MESSAGES', valor: JSON.stringify(customMessages) }
-      ], { onConflict: 'user_id, nome' })
+      await (supabase as any).from('configuracoes').upsert({ user_id: p.id, nome: 'FONT_FAMILY', valor: fontFamily }, { onConflict: 'user_id, nome' })
 
       toast({ title: "Configurações Salvas", description: "Configurações sincronizadas com sucesso." })
       onSave()
@@ -315,7 +305,7 @@ export function SettingsModal({
                   return (
                     <div key={k} className="flex items-center justify-between text-xs p-2 bg-background/50 rounded-lg">
                       <div className="flex items-center gap-2 w-20">
-                        <Switch checked={workingHours[day].active} onCheckedChange={(c) => setWorkingHours({...workingHours, [day]: {...workingHours[day], active: c}})} scale={0.8} />
+                        <Switch checked={workingHours[day].active} onCheckedChange={(c) => setWorkingHours({...workingHours, [day]: {...workingHours[day], active: c}})} />
                         <span className="font-bold uppercase opacity-60">{k}</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -350,20 +340,6 @@ export function SettingsModal({
               </div>
             </div>
 
-            <div className="space-y-4">
-              <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Templates WhatsApp</Label>
-              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold">Confirmação</Label>
-                  <Textarea value={customMessages.confirmacao} onChange={(e) => setCustomMessages({...customMessages, confirmacao: e.target.value})} className="text-xs h-20 rounded-xl bg-background" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold">Lembrete</Label>
-                  <Textarea value={customMessages.lembrete} onChange={(e) => setCustomMessages({...customMessages, lembrete: e.target.value})} className="text-xs h-20 rounded-xl bg-background" />
-                </div>
-                <p className="text-[9px] text-muted-foreground italic">Use: {'{nome}'}, {'{servico}'}, {'{data}'}, {'{hora}'}</p>
-              </div>
-            </div>
           </TabsContent>
 
           <TabsContent value="estilo" className="space-y-6 outline-none">

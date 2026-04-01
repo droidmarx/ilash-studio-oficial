@@ -24,7 +24,6 @@ import { SettingsModal } from "@/components/agenda/SettingsModal"
 import { AppointmentForm } from "@/components/agenda/AppointmentForm"
 import { AppointmentsList } from "@/components/agenda/AppointmentsList"
 import { ClientsManager } from "@/components/agenda/ClientsManager"
-import { WhatsAppFAB } from "@/components/agenda/WhatsAppFAB"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -555,8 +554,6 @@ export default function AgendaPage() {
         theme={theme}
         toggleTheme={toggleTheme}
       />
-
-      <WhatsAppFAB />
     </div>
   )
 }

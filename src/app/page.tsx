@@ -60,24 +60,6 @@ import { SetupModal } from "@/components/auth/SetupModal"
 import { getProfile, Perfil } from "@/lib/api"
 import { useAuth } from "@/components/auth/AuthContext"
 
-// Lista de fontes suportadas (PASSO 10)
-const SUPPORTED_FONTS = [
-  "Poppins", "Playfair Display", "Lora", "Montserrat", "Raleway", 
-  "Roboto", "Open Sans", "Oswald", "Inter", "Cinzel"
-];
-
-function loadGoogleFont(font: string) {
-  if (typeof window === 'undefined') return;
-  const id = `google-font-${font.replace(/\s+/g, '-').toLowerCase()}`;
-  if (document.getElementById(id)) return;
-
-  const link = document.createElement('link');
-  link.id = id;
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@300;400;500;600;700;800;900&display=swap`;
-  document.head.appendChild(link);
-}
-
 export default function AgendaPage() {
   const router = useRouter()
   const { user, loading: authLoading, signOut } = useAuth()
@@ -129,16 +111,6 @@ export default function AgendaPage() {
         const savedTheme = localStorage.getItem('theme') || 'dark'
         setTheme(savedTheme)
         
-        // Carrega Fonte Dinâmica (PASSO 10)
-        supabase.from('configuracoes').select('valor').eq('nome', 'FONT_FAMILY').maybeSingle().then(({ data }) => {
-          if (data?.valor) {
-            loadGoogleFont(data.valor);
-            document.documentElement.style.setProperty('--font-family', data.valor);
-          } else {
-            loadGoogleFont('Poppins');
-          }
-        });
-
         const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby']
         document.documentElement.classList.remove(...allThemes)
         if (savedTheme !== 'light') {
@@ -374,7 +346,7 @@ export default function AgendaPage() {
                   <Crown className="text-primary animate-bounce" size={24} />
                 </div>
               )}
-              <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-2 uppercase italic tracking-tighter">
+              <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-2 italic tracking-tighter">
                 {perfil?.nome_exibicao || "I Lash Studio"}
               </h1>
             </div>

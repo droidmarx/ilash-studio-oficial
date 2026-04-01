@@ -30,17 +30,6 @@ import {
   getProfile, updateProfile, Perfil
 } from "@/lib/api"
 
-function loadGoogleFont(font: string) {
-  if (typeof window === 'undefined') return;
-  const id = `google-font-${font.replace(/\s+/g, '-').toLowerCase()}`;
-  if (document.getElementById(id)) return;
-
-  const link = document.createElement('link');
-  link.id = id;
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@300;400;500;600;700;800;900&display=swap`;
-  document.head.appendChild(link);
-}
 
 interface ThemeToggleProps {
   theme: string
@@ -102,7 +91,6 @@ export function SettingsModal({
   const [techniques, setTechniques] = useState<string[]>(defaultTechniques)
   const [newTechnique, setNewTechnique] = useState("")
   const [testingToken, setTestingToken] = useState(false)
-  const [fontFamily, setFontFamily] = useState("Poppins")
   
   const [perfil, setPerfil] = useState<Partial<Perfil>>({ nome_exibicao: "", slug: "" })
   const { toast } = useToast()
@@ -141,11 +129,6 @@ export function SettingsModal({
       const p = await getProfile()
       if (p) setPerfil(p as Perfil)
 
-      const { data: configs } = await (supabase as any).from('configuracoes').select('nome, valor').eq('nome', 'FONT_FAMILY').maybeSingle()
-      if (configs?.valor) {
-        setFontFamily(configs.valor)
-        loadGoogleFont(configs.valor)
-      }
       
     } catch (error) {
       console.error("Erro ao carregar configurações", error)
@@ -233,7 +216,6 @@ export function SettingsModal({
         await updateProfile(p);
       }
 
-      await (supabase as any).from('configuracoes').upsert({ user_id: p.id, nome: 'FONT_FAMILY', valor: fontFamily }, { onConflict: 'user_id, nome' })
 
       toast({ title: "Configurações Salvas", description: "Configurações sincronizadas com sucesso." })
       onSave()
@@ -366,29 +348,6 @@ export function SettingsModal({
               </div>
             </div>
 
-            <div className="space-y-4">
-              <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Tipografia Global</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  "Poppins", "Playfair Display", "Lora", "Montserrat", "Raleway", 
-                  "Roboto", "Open Sans", "Oswald", "Inter", "Cinzel"
-                ].map(font => (
-                  <Button 
-                    key={font}
-                    variant={fontFamily === font ? "default" : "outline"}
-                    onClick={() => {
-                      setFontFamily(font);
-                      loadGoogleFont(font);
-                      document.documentElement.style.setProperty('--font-family', font);
-                    }}
-                    className={cn("rounded-xl h-12 text-sm justify-start gap-3", fontFamily === font && "bg-gold-gradient")}
-                    style={{ fontFamily: font }}
-                  >
-                    <Type size={16} /> {font}
-                  </Button>
-                ))}
-              </div>
-            </div>
           </TabsContent>
         </Tabs>
 

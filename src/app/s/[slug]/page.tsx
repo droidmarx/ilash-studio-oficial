@@ -277,7 +277,7 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
     }
   }
 
-  if (perfilLoading || configLoading) {
+  if (perfilLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center bg-background/50 backdrop-blur-[2px]">
         <Loader2 className="animate-spin text-primary" size={48} />
@@ -294,6 +294,14 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
           <p className="text-muted-foreground italic">O link que você acessou parece estar incorreto ou o estúdio não existe.</p>
           <Button onClick={() => window.location.href = '/'} className="mt-4 rounded-full px-8">Voltar ao Início</Button>
         </div>
+      </div>
+    )
+  }
+
+  if (configLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 text-center bg-background/50 backdrop-blur-[2px]">
+        <Loader2 className="animate-spin text-primary" size={48} />
       </div>
     )
   }

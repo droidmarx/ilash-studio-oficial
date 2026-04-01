@@ -130,7 +130,10 @@ export function SettingsModal({
       if (p) setPerfil(p as Perfil)
 
       const { data: configs } = await (supabase as any).from('configuracoes').select('nome, valor').eq('nome', 'FONT_FAMILY').maybeSingle()
-      if (configs?.valor) setFontFamily(configs.valor)
+      if (configs?.valor) {
+        setFontFamily(configs.valor)
+        loadGoogleFont(configs.valor)
+      }
       
     } catch (error) {
       console.error("Erro ao carregar configurações", error)
@@ -361,7 +364,11 @@ export function SettingsModal({
                   <Button 
                     key={font}
                     variant={fontFamily === font ? "default" : "outline"}
-                    onClick={() => setFontFamily(font)}
+                    onClick={() => {
+                      setFontFamily(font);
+                      loadGoogleFont(font);
+                      document.documentElement.style.setProperty('--font-family', font);
+                    }}
                     className={cn("rounded-xl h-12 text-sm justify-start gap-3", fontFamily === font && "bg-gold-gradient")}
                     style={{ fontFamily: font }}
                   >

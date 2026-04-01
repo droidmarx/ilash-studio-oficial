@@ -31,7 +31,7 @@ export async function sendTelegramNotification({
   const studioName = profile?.nome_exibicao || "I Lash Studio";
   const allRecipients = configData ? configData.map((item: any) => ({ id: item.id, nome: item.nome, chatID: item.valor })) : [];
   
-  const SYSTEM_KEYS = ['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'];
+  const SYSTEM_KEYS = ['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'FONT_FAMILY', 'CUSTOM_MESSAGES'];
   const recipients = allRecipients.filter(r => !SYSTEM_KEYS.includes(r.nome) && r.chatID);
 
   if (recipients.length === 0) return;
@@ -52,25 +52,42 @@ export async function sendTelegramNotification({
     'Confirmado': '✅'
   }[tipo] || '🔔';
 
-  let message = `👤 <b>${studioName}</b>\n\n`;
-  message += `${actionEmoji} <b>Ação:</b> Cliente ${tipo.toLowerCase()}\n`;
-  message += `👥 <b>Cliente:</b> ${cliente.nome}\n\n`;
+  const formatCurrency = (val: any) => {
+    if (!val) return 'R$ 0,00';
+    return `R$ ${val.toString().replace('.', ',')}`;
+  };
 
+  let message = `👤 <b>${studioName}</b>\n\n`;
+  message += `${actionEmoji} <b>Ação:</b> Cliente ${tipo.toLowerCase()}\n\n`;
+
+  // Se for alteração, mostra o diferencial de forma curta no topo
   if (tipo === 'Alterado' && antes && depois) {
     if (antes.data !== depois.data) {
-      message += `🕒 <b>Antes:</b> ${formatDateTime(antes.data)}\n`;
-      message += `🕒 <b>Depois:</b> ${formatDateTime(depois.data)}\n\n`;
+      message += `🕒 <b>Troca de Horário:</b>\nDe: ${formatDateTime(antes.data)}\nPara: ${formatDateTime(depois.data)}\n\n`;
     }
-    if (antes.servico !== depois.servico) {
-      message += `🎨 <b>Serviço anterior:</b> ${antes.servico}\n`;
-      message += `🎨 <b>Novo serviço:</b> ${depois.servico}\n\n`;
-    }
-  } else {
-    message += `📅 <b>Data/Hora:</b> ${formatDateTime(cliente.data)}\n`;
-    message += `🎨 <b>Serviço:</b> ${cliente.servico}\n`;
   }
 
-  message += `\n⏰ <b>Data:</b> ${format(new Date(), "dd/MM/yyyy HH:mm")}`;
+  // ESTADO ATUAL (FULL INFO conforme pedido pelo usuário)
+  const info = depois || cliente;
+  message += `📋 <b>DADOS DO AGENDAMENTO (ATUAL):</b>\n`;
+  message += `👤 <b>Cliente:</b> ${info.nome}\n`;
+  message += `📅 <b>Data/Hora:</b> ${formatDateTime(info.data)}\n`;
+  message += `🎨 <b>Técnica:</b> ${info.servico}\n`;
+  message += `🔸 <b>Tipo:</b> ${info.tipo}\n`;
+  message += `💰 <b>Valor Base:</b> ${formatCurrency(info.valor)}\n`;
+  message += `📱 <b>WhatsApp:</b> ${info.whatsapp || '---'}\n`;
+  message += `✅ <b>Confirmado:</b> ${info.confirmado ? 'Sim' : 'Não'}\n`;
+  
+  if (info.servicosAdicionais && info.servicosAdicionais.length > 0) {
+    const extras = info.servicosAdicionais.map((s: any) => `• ${s.nome} (${formatCurrency(s.valor)})`).join('\n');
+    message += `✨ <b>Adicionais:</b>\n${extras}\n`;
+  }
+  
+  if (info.observacoes) {
+    message += `📝 <b>Obs:</b> ${info.observacoes}\n`;
+  }
+
+  message += `\n⏰ <b>Registro:</b> ${format(new Date(), "dd/MM/yyyy HH:mm")}`;
 
   for (const recipient of recipients) {
     try {

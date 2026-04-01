@@ -60,6 +60,24 @@ import { SetupModal } from "@/components/auth/SetupModal"
 import { getProfile, Perfil } from "@/lib/api"
 import { useAuth } from "@/components/auth/AuthContext"
 
+// Lista de fontes suportadas (PASSO 10)
+const SUPPORTED_FONTS = [
+  "Poppins", "Playfair Display", "Lora", "Montserrat", "Raleway", 
+  "Roboto", "Open Sans", "Oswald", "Inter", "Cinzel"
+];
+
+function loadGoogleFont(font: string) {
+  if (typeof window === 'undefined') return;
+  const id = `google-font-${font.replace(/\s+/g, '-').toLowerCase()}`;
+  if (document.getElementById(id)) return;
+
+  const link = document.createElement('link');
+  link.id = id;
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/\s+/g, '+')}:wght@300;400;500;600;700;800;900&display=swap`;
+  document.head.appendChild(link);
+}
+
 export default function AgendaPage() {
   const router = useRouter()
   const { user, loading: authLoading, signOut } = useAuth()
@@ -114,7 +132,10 @@ export default function AgendaPage() {
         // Carrega Fonte Dinâmica (PASSO 10)
         supabase.from('configuracoes').select('valor').eq('nome', 'FONT_FAMILY').maybeSingle().then(({ data }) => {
           if (data?.valor) {
+            loadGoogleFont(data.valor);
             document.documentElement.style.setProperty('--font-family', data.valor);
+          } else {
+            loadGoogleFont('Poppins');
           }
         });
 
@@ -364,9 +385,9 @@ export default function AgendaPage() {
             {user && (
               <div className="flex flex-col items-center mt-6 animate-in fade-in zoom-in duration-700">
                 <div className="relative w-16 h-16 rounded-full p-1 bg-gold-gradient mb-3 shadow-xl">
-                  {user.user_metadata?.avatar_url ? (
+                  {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
                     <Image 
-                      src={user.user_metadata.avatar_url} 
+                      src={user.user_metadata.avatar_url || user.user_metadata.picture} 
                       alt="Perfil" 
                       width={64} 
                       height={64} 

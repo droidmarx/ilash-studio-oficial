@@ -424,7 +424,7 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
                   </div>
                )}
             </div>
-            <h1 className="text-5xl md:text-7xl font-headline text-gold-gradient py-4 italic tracking-tighter drop-shadow-2xl">{perfil.nome_exibicao}</h1>
+            <h1 className="text-5xl md:text-7xl font-headline text-gold-gradient py-4 px-4 tracking-tighter drop-shadow-2xl">{perfil.nome_exibicao}</h1>
           </div>
           <p className="text-primary/70 text-[10px] font-bold tracking-[0.5em] uppercase">Exclusive Experience</p>
         </header>

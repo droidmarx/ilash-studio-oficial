@@ -351,7 +351,7 @@ export default function AgendaPage() {
                   <Crown className="text-primary animate-bounce" size={24} />
                 </div>
               )}
-              <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-6 italic tracking-tighter">
+              <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-6 px-4 tracking-tighter">
                 {perfil?.nome_exibicao || "I Lash Studio"}
               </h1>
             </div>

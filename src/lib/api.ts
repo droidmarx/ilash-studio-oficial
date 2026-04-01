@@ -468,7 +468,7 @@ export async function getProfileBySlug(slug: string): Promise<Perfil | null> {
   const { data, error } = await supabase
     .from('perfis')
     .select('*')
-    .eq('slug', slug)
+    .ilike('slug', slug)
     .maybeSingle();
   
   if (error) return null;

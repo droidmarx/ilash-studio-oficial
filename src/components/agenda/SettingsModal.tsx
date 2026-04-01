@@ -259,7 +259,7 @@ export function SettingsModal({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase">Slug do Link</Label>
-                  <Input value={perfil.slug} onChange={(e) => setPerfil({...perfil, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})} className="rounded-xl bg-background" />
+                  <Input value={perfil.slug} onChange={(e) => setPerfil({...perfil, slug: e.target.value})} className="rounded-xl bg-background" />
                 </div>
               </div>
             </div>

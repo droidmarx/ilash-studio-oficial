@@ -346,7 +346,7 @@ export default function AgendaPage() {
                   <Crown className="text-primary animate-bounce" size={24} />
                 </div>
               )}
-              <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-2 italic tracking-tighter">
+              <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-6 italic tracking-tighter">
                 {perfil?.nome_exibicao || "I Lash Studio"}
               </h1>
             </div>
@@ -364,6 +364,7 @@ export default function AgendaPage() {
                       width={64} 
                       height={64} 
                       className="rounded-full object-cover border-2 border-background"
+                      unoptimized
                     />
                   ) : (
                     <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-xl font-bold">
@@ -380,8 +381,8 @@ export default function AgendaPage() {
               </div>
             )}
             {perfil && (
-              <p className="text-[10px] font-bold text-primary/30 tracking-widest uppercase mt-4">
-                Seu link: <span className="text-primary/50 lowercase">ilash-studio-oficial.vercel.app/s/{perfil.slug}</span>
+              <p className="text-[11px] font-bold text-primary/40 tracking-widest mt-8 pb-4">
+                Seu link: <span className="text-primary/60">ilash-studio-oficial.vercel.app/s/{perfil.slug}</span>
               </p>
             )}
           </div>

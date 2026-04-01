@@ -297,5 +297,5 @@
 
  body {
   @apply bg-background text-foreground min-h-screen selection:bg-primary/30 transition-colors duration-500;
-  font-family: var(--font-family);
+
 }

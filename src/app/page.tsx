@@ -103,6 +103,12 @@ export default function AgendaPage() {
         getProfile().then(p => {
           if (p) {
             setPerfil(p)
+            // Sincroniza Avatar do Google (PASSO 11)
+            const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+            if (googleAvatar && p.avatar_url !== googleAvatar) {
+              const { updateProfile } = require("@/lib/api");
+              updateProfile({ avatar_url: googleAvatar });
+            }
           } else {
             setIsSetupOpen(true)
           }

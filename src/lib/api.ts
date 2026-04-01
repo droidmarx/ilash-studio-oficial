@@ -19,6 +19,7 @@ export interface Perfil {
   slug: string;
   nome_exibicao: string;
   logo_url?: string;
+  avatar_url?: string;
 }
 
 export interface Anamnese {
@@ -444,7 +445,8 @@ export async function getProfile(): Promise<Perfil | null> {
       id: user.id,
       slug: `studio-${user.id.substring(0, 5)}`,
       nome_exibicao: "Meu Novo Studio",
-      logo_url: ""
+      logo_url: "",
+      avatar_url: ""
     }
     const { data: created, error: createError } = await supabase
       .from('perfis')
@@ -465,7 +467,7 @@ export async function getProfile(): Promise<Perfil | null> {
 export async function getProfileBySlug(slug: string): Promise<Perfil | null> {
   const { data, error } = await supabase
     .from('perfis')
-    .select('*')
+    .select('id, slug, nome_exibicao, logo_url, avatar_url')
     .eq('slug', slug)
     .maybeSingle();
   

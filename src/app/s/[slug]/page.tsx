@@ -395,36 +395,30 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
     <div className="min-h-screen py-10 px-4 md:px-8 bg-background/50 backdrop-blur-[2px]">
       <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         
-        <header className="text-center space-y-4 pt-20 pb-8">
-          <div className="flex flex-col items-center justify-center gap-4 animate-float-luxury">
-            <div className="relative p-6">
+        <header className="text-center space-y-4 pt-24 pb-12">
+          <div className="flex flex-col items-center justify-center gap-6 animate-float-luxury">
+            <div className="relative p-1 bg-gold-gradient rounded-full shadow-2xl">
                <div className="absolute inset-0 bg-primary/20 blur-[50px] rounded-full scale-125 -z-10" />
-               {perfil.logo_url ? (
-                  <div className="relative w-48 h-24">
+               {perfil.avatar_url || perfil.logo_url ? (
+                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-background">
                     <Image 
-                      src={perfil.logo_url} 
+                      src={perfil.avatar_url || perfil.logo_url!} 
                       alt={perfil.nome_exibicao} 
                       fill 
-                      className="object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                      className="object-cover"
                       priority
                       unoptimized
                     />
                   </div>
                ) : (
-                  <Image 
-                    src="/logo.png" 
-                    alt="Logo" 
-                    width={119} 
-                    height={60} 
-                    className="drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] relative z-10"
-                    priority
-                    unoptimized
-                  />
+                  <div className="relative w-32 h-32 rounded-full bg-muted flex items-center justify-center border-4 border-background">
+                    <Crown className="text-primary" size={48} />
+                  </div>
                )}
             </div>
-            <h1 className="text-6xl font-headline text-gold-gradient py-2 uppercase leading-tight italic">{perfil.nome_exibicao}</h1>
+            <h1 className="text-5xl md:text-7xl font-headline text-gold-gradient py-4 italic tracking-tighter drop-shadow-2xl">{perfil.nome_exibicao}</h1>
           </div>
-          <p className="text-primary/70 text-[10px] font-bold tracking-[0.5em] uppercase">Experiência VIP</p>
+          <p className="text-primary/70 text-[10px] font-bold tracking-[0.5em] uppercase">Exclusive Experience</p>
         </header>
 
         <Card className="bg-card/60 backdrop-blur-3xl rounded-[2.5rem] border-border shadow-2xl overflow-hidden">

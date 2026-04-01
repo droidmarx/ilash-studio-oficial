@@ -361,7 +361,7 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
            </div>
            
            <div className="space-y-4">
-             <h1 className="text-4xl font-headline text-gold-gradient py-2 uppercase leading-tight italic">{perfil.nome_exibicao} em Férias</h1>
+             <h1 className="text-4xl md:text-5xl font-headline text-gold-gradient py-4 px-4 tracking-tighter drop-shadow-2xl leading-tight">{perfil.nome_exibicao} em Férias</h1>
              <p className="text-lg text-muted-foreground leading-relaxed whitespace-pre-line">
                {vacationMode?.message || "Estamos em período de recesso. Nosso sistema de agendamento online está pausado."}
              </p>

@@ -355,7 +355,7 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
 
           <div className="pt-4">
           {perfil?.logo_url || perfil?.avatar_url ? (
-            <img src={perfil.logo_url || perfil.avatar_url!} alt="Logo do Studio" className="w-full h-full object-cover" />
+            <img src={perfil.logo_url || perfil.avatar_url!} alt="Logo do Studio" className="w-full h-full object-cover rounded-full shadow-lg border-2 border-primary/20 aspect-square" />
           ) : (
             <Crown className="text-primary opacity-50" size={40} />
           )}
@@ -422,10 +422,10 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
           <div className="flex flex-col items-center justify-center gap-6 animate-float-luxury">
             <div className="relative p-1 bg-gold-gradient rounded-full shadow-2xl">
                <div className="absolute inset-0 bg-primary/20 blur-[50px] rounded-full scale-125 -z-10" />
-               {perfil.avatar_url || perfil.logo_url ? (
-                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-background">
+               {perfil.logo_url || perfil.avatar_url ? (
+                  <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-background aspect-square shadow-xl">
                     <img 
-                      src={perfil.avatar_url || perfil.logo_url!} 
+                      src={perfil.logo_url || perfil.avatar_url!} 
                       alt={perfil.nome_exibicao} 
                       className="w-full h-full object-cover"
                     />

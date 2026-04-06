@@ -262,72 +262,6 @@ export default function AgendaPage() {
   return (
     <div className="min-h-screen py-8 px-4 md:px-8 font-body bg-background/50 backdrop-blur-[2px] text-foreground animate-in fade-in duration-1000">
       
-      <div className="fixed top-8 right-8 z-[70]">
-        <DropdownMenu modal={false} open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              className={cn(
-                "rounded-full w-16 h-16 shadow-2xl bg-gold-gradient text-primary-foreground transition-all duration-500 border-none outline-none focus:ring-0 overflow-hidden relative group",
-                isDropdownOpen ? "scale-110 rotate-180 shadow-[0_0_50px_rgba(var(--primary),0.6)]" : "hover:scale-110 shadow-[0_0_25px_rgba(var(--primary),0.4)]"
-              )}
-              title="Painel de Gestão VIP"
-            >
-              <div className="relative w-full h-full flex items-center justify-center">
-                <MenuIcon 
-                  size={32} 
-                  className={cn(
-                    "absolute transition-all duration-500 ease-in-out transform",
-                    isDropdownOpen ? "opacity-0 scale-0 rotate-90" : "opacity-100 scale-100 rotate-0"
-                  )} 
-                />
-                <CloseIcon 
-                  size={32} 
-                  className={cn(
-                    "absolute transition-all duration-500 ease-in-out transform",
-                    isDropdownOpen ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-0 -rotate-90"
-                  )} 
-                />
-              </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="end" 
-            side="bottom"
-            sideOffset={16}
-            className="w-56 bg-card/90 backdrop-blur-2xl border-primary/30 rounded-[2rem] p-2 shadow-2xl animate-in slide-in-from-top-4 duration-300 z-[110]"
-          >
-            <div className="px-3 py-3 border-b border-primary/10 mb-2">
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 text-center flex items-center justify-center gap-2">
-                <Crown size={12} /> Gestão Studio
-              </p>
-            </div>
-
-            <DropdownMenuItem 
-              onClick={() => setIsSettingsOpen(true)}
-              className="rounded-2xl gap-3 py-4 focus:bg-primary/10 focus:text-primary cursor-pointer transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Settings size={18} className="text-primary" />
-              </div>
-              <span className="font-bold text-sm">Configurações</span>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator className="bg-primary/10 my-2" />
-
-            <DropdownMenuItem 
-              onClick={handleLogout}
-              className="rounded-2xl gap-3 py-4 focus:bg-destructive/10 text-destructive focus:text-destructive cursor-pointer transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center">
-                <LogOut size={18} />
-              </div>
-              <span className="font-bold text-sm">Sair do Sistema</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
       <Toaster />
 
       <SetupModal 
@@ -340,63 +274,117 @@ export default function AgendaPage() {
 
       <div className="w-full max-w-7xl mx-auto space-y-10">
         
-          <header className="text-center space-y-4 mb-12 animate-in fade-in duration-1000">
-            <div className="flex flex-col items-center justify-center gap-4 py-8">
-              {perfil?.logo_url ? (
-                <div className="relative w-48 h-24 mb-4">
-                  <Image 
-                    src={perfil.logo_url} 
-                    alt={perfil.nome_exibicao} 
-                    fill 
-                    className="object-contain"
-                    unoptimized
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <Crown className="text-primary animate-bounce" size={24} />
-                </div>
-              )}
-              <h1 className="text-5xl md:text-8xl font-headline text-gold-gradient drop-shadow-2xl py-6 px-4 tracking-tighter">
-                {perfil?.nome_exibicao || "I Lash Studio"}
-              </h1>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-primary/70 text-sm md:text-base font-medium tracking-[0.3em] uppercase">
-                Exclusive Client Experience
-              </p>
-            {user && (
-              <div className="flex flex-col items-center mt-6 animate-in fade-in zoom-in duration-700">
-                <div className="relative w-16 h-16 rounded-full p-1 bg-gold-gradient mb-3 shadow-xl">
-                  {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
-                    <Image 
-                      src={user.user_metadata.avatar_url || user.user_metadata.picture} 
-                      alt="Perfil" 
-                      width={64} 
-                      height={64} 
-                      className="rounded-full object-cover border-2 border-background"
-                      unoptimized
+        <header className="relative w-full flex flex-col md:flex-row items-center justify-between bg-card/60 backdrop-blur-3xl border border-primary/20 rounded-[3rem] p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-12 animate-in slide-in-from-top-8 duration-1000">
+           {/* Esquerda/Centro: Identidade Visual e Link */}
+           <div className="flex flex-col md:flex-row items-center gap-8 w-full md:w-auto">
+              <div className="relative p-1 bg-gold-gradient rounded-full shadow-2xl overflow-hidden shrink-0 group hover:scale-105 transition-transform duration-500">
+                 <div className="absolute inset-0 bg-primary/20 blur-[30px] rounded-full scale-125 -z-10" />
+                 {perfil?.logo_url || perfil?.avatar_url ? (
+                    <img 
+                      src={perfil.logo_url || perfil.avatar_url!}
+                      alt="Logo Studio"
+                      className="w-28 h-28 md:w-36 md:h-36 object-cover rounded-full border-[6px] border-background aspect-square shadow-inner"
                     />
-                  ) : (
-                    <div className="w-full h-full rounded-full bg-muted flex items-center justify-center text-xl font-bold">
-                      {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)}
+                 ) : (
+                    <div className="w-28 h-28 md:w-36 md:h-36 flex items-center justify-center bg-muted rounded-full border-[6px] border-background shadow-inner">
+                       <Crown className="text-primary/50" size={48} />
                     </div>
-                  )}
-                </div>
-                <p className="text-primary/80 text-xs font-black uppercase tracking-widest">
-                  {user.user_metadata?.full_name || 'Profissional I Lash'}
-                </p>
-                <p className="text-primary/40 text-[9px] font-medium lowercase tracking-tighter">
-                  {user.email}
-                </p>
+                 )}
               </div>
-            )}
-            {perfil && (
-              <p className="text-[11px] font-bold text-primary/40 tracking-widest mt-8 pb-4">
-                Seu link: <a href={`/s/${perfil.slug}`} target="_blank" className="text-primary/60 hover:text-primary underline underline-offset-4 transition-colors">ilash-studio-oficial.vercel.app/s/{perfil.slug}</a>
-              </p>
-            )}
-          </div>
+              
+              <div className="text-center md:text-left space-y-3">
+                 <h1 className="text-4xl md:text-6xl font-headline text-gold-gradient tracking-tighter drop-shadow-xl">
+                   {perfil?.nome_exibicao || "I Lash Studio"}
+                 </h1>
+                 <p className="text-primary/70 text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase">
+                   Professional Dashboard
+                 </p>
+                 
+                 {perfil && (
+                   <div className="mt-6 flex justify-center md:justify-start">
+                     <a 
+                       href={`/s/${perfil.slug}`} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className="inline-flex items-center gap-3 px-5 py-2.5 bg-primary/5 rounded-full border border-primary/30 transition-all duration-300 hover:bg-primary/20 hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] group"
+                     >
+                       <span className="text-[10px] font-black text-primary/50 tracking-widest uppercase">Seu Link:</span>
+                       <span className="text-xs font-bold text-primary group-hover:text-gold-gradient transition-colors">
+                         ilash-studio-oficial.vercel.app/s/{perfil.slug}
+                       </span>
+                     </a>
+                   </div>
+                 )}
+              </div>
+           </div>
+
+           {/* Direita: Menu de Ações (Substituindo o antigo flutuante) */}
+           <div className="absolute top-6 right-6 md:relative md:top-0 md:right-0 mt-2 md:mt-0 z-50">
+             <DropdownMenu modal={false} open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+               <DropdownMenuTrigger asChild>
+                 <Button
+                   type="button"
+                   className={cn(
+                     "rounded-full w-14 h-14 md:w-16 md:h-16 shadow-2xl bg-gold-gradient text-primary-foreground transition-all duration-500 border-none outline-none focus:ring-0 overflow-hidden relative group",
+                     isDropdownOpen ? "scale-110 rotate-180 shadow-[0_0_40px_rgba(var(--primary),0.5)]" : "hover:scale-110 shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+                   )}
+                   title="Menu Premium"
+                 >
+                   <div className="relative w-full h-full flex items-center justify-center">
+                     <MenuIcon 
+                       size={28} 
+                       className={cn(
+                         "absolute transition-all duration-500 ease-in-out transform",
+                         isDropdownOpen ? "opacity-0 scale-0 rotate-90" : "opacity-100 scale-100 rotate-0"
+                       )} 
+                     />
+                     <CloseIcon 
+                       size={28} 
+                       className={cn(
+                         "absolute transition-all duration-500 ease-in-out transform",
+                         isDropdownOpen ? "opacity-100 scale-100 rotate-0" : "opacity-0 scale-0 -rotate-90"
+                       )} 
+                     />
+                   </div>
+                 </Button>
+               </DropdownMenuTrigger>
+               <DropdownMenuContent 
+                 align="end" 
+                 side="bottom"
+                 sideOffset={20}
+                 className="w-64 bg-card/95 backdrop-blur-3xl border-primary/30 rounded-[2rem] p-3 shadow-2xl animate-in fade-in zoom-in-95 duration-200 z-[110]"
+               >
+                 <div className="px-4 py-4 border-b border-primary/10 mb-3 flex flex-col items-center justify-center gap-2">
+                   <Crown size={20} className="text-primary" />
+                   <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 text-center">
+                     Gestão Studio
+                   </p>
+                 </div>
+
+                 <DropdownMenuItem 
+                   onClick={() => setIsSettingsOpen(true)}
+                   className="rounded-2xl gap-4 py-4 px-4 focus:bg-primary/15 focus:text-primary cursor-pointer transition-colors"
+                 >
+                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                     <Settings size={20} className="text-primary" />
+                   </div>
+                   <span className="font-bold text-sm">Configurações</span>
+                 </DropdownMenuItem>
+
+                 <DropdownMenuSeparator className="bg-primary/10 my-3" />
+
+                 <DropdownMenuItem 
+                   onClick={handleLogout}
+                   className="rounded-2xl gap-4 py-4 px-4 focus:bg-destructive/15 text-destructive focus:text-destructive cursor-pointer transition-colors"
+                 >
+                   <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+                     <LogOut size={20} />
+                   </div>
+                   <span className="font-bold text-sm">Sair do Sistema</span>
+                 </DropdownMenuItem>
+               </DropdownMenuContent>
+             </DropdownMenu>
+           </div>
         </header>
 
         {loading ? (

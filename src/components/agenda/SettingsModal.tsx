@@ -106,7 +106,7 @@ export function SettingsModal({
     try {
       const data = await getRecipients()
       const persons = data.filter(r => 
-        !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES'].includes(r.nome)
+        !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'PERFIL_EXTRAS'].includes(r.nome)
       )
       setRecipients(persons.slice(0, 3))
       
@@ -197,7 +197,7 @@ export function SettingsModal({
       for (const remote of remoteRecipients) {
         const isSystemKey = [
           'SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 
-          'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'
+          'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'PERFIL_EXTRAS'
         ].includes(remote.nome);
         if (!isSystemKey && !recipients.find(r => r.id === remote.id)) {
           await deleteRecipient(remote.id)

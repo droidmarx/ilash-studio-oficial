@@ -4,13 +4,13 @@ import { getProfile } from '@/lib/api';
 
 export async function POST(request: Request) {
   try {
-    const profile = await getProfile();
-    if (!profile) {
+    const formData = await request.formData();
+    const userId = formData.get('userId') as string | null;
+    const file = formData.get('file') as File | null;
+
+    if (!userId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
-
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
     
     if (!file) {
       return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 });
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     }
 
     const buffer = await file.arrayBuffer();
-    const fileName = `${profile.id}-${Date.now()}`;
+    const fileName = `${userId}-${Date.now()}`;
     const filePath = `custom/${fileName}`;
 
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage

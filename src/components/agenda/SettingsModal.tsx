@@ -162,6 +162,7 @@ export function SettingsModal({
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('userId', perfil.id!)
 
       const res = await fetch('/api/upload/logo', {
         method: 'POST',

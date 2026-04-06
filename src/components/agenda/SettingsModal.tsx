@@ -91,6 +91,7 @@ export function SettingsModal({
   const [techniques, setTechniques] = useState<string[]>(defaultTechniques)
   const [newTechnique, setNewTechnique] = useState("")
   const [testingToken, setTestingToken] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   
   const [perfil, setPerfil] = useState<Partial<Perfil>>({ nome_exibicao: "", slug: "" })
   const { toast } = useToast()
@@ -146,6 +147,42 @@ export function SettingsModal({
     const newRecipients = [...recipients]
     newRecipients.splice(index, 1)
     setRecipients(newRecipients)
+  }
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2097152) {
+      toast({ variant: "destructive", title: "Erro ao enviar", description: "A imagem deve ter no máximo 2MB" })
+      return
+    }
+
+    setUploadingLogo(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/upload/logo', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || "Houve um erro no upload")
+      }
+
+      const { url } = await res.json()
+      setPerfil(prev => ({ ...prev, logo_url: url }))
+      toast({ title: "Sucesso", description: "Sua foto foi carregada com sucesso! Clique em Salvar Configurações no final da tela para mantê-la." })
+    } catch (error: any) {
+      console.error("Erro no upload:", error)
+      toast({ variant: "destructive", title: "Erro", description: error.message })
+    } finally {
+      setUploadingLogo(false)
+      if (e.target) e.target.value = ''
+    }
   }
 
   const handleUpdateRecipientField = (index: number, field: 'nome' | 'chatID', value: string) => {
@@ -253,6 +290,36 @@ export function SettingsModal({
             <div className="space-y-4">
               <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Identidade</Label>
               <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+                
+                <div className="flex gap-4 items-center mb-4">
+                  <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0 bg-background flex items-center justify-center">
+                    {uploadingLogo ? (
+                      <Loader2 className="animate-spin text-primary" size={20} />
+                    ) : perfil.logo_url ? (
+                      <img src={perfil.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                    ) : perfil.avatar_url ? (
+                      <img src={perfil.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <Crown className="text-primary/50" size={24} />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-[10px] font-bold uppercase">Sua Logo / Foto (Máx 2MB)</Label>
+                    <div className="text-xs text-muted-foreground">O sistema usará a foto do Google automaticamente caso vazio.</div>
+                    <div className="relative mt-2">
+                      <Button variant="outline" size="sm" className="h-8 text-xs relative" disabled={uploadingLogo}>
+                        {uploadingLogo ? 'Enviando...' : 'Fazer Upload (JPG/PNG)'}
+                        <input type="file" accept="image/jpeg, image/png" className="absolute inset-0 opacity-0 cursor-pointer" disabled={uploadingLogo} onChange={handleUploadLogo} />
+                      </Button>
+                      {perfil.logo_url && (
+                        <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive ml-2" onClick={() => setPerfil({...perfil, logo_url: ''})} disabled={uploadingLogo}>
+                          Remover
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase">Nome do Estúdio</Label>
                   <Input value={perfil.nome_exibicao} onChange={(e) => setPerfil({...perfil, nome_exibicao: e.target.value})} className="rounded-xl bg-background" />

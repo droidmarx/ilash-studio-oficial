@@ -399,17 +399,20 @@ export async function createClient(data: Omit<Client, 'id'>, userId?: string): P
   return mapToClient(inserted);
 }
 
-export async function updateClient(id: string, data: Partial<Client>): Promise<void> {
+export async function updateClient(id: string, data: Partial<Client>): Promise<Client> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Usuário não autenticado");
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('agendamentos')
     .update(mapToDb(data))
     .eq('id', id)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select()
+    .single();
   
   if (error) throw error;
+  return mapToClient(updated);
 }
 
 export async function deleteClient(id: string): Promise<void> {

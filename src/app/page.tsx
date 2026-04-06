@@ -122,7 +122,7 @@ export default function AgendaPage() {
         const savedTheme = localStorage.getItem('theme') || 'dark'
         setTheme(savedTheme)
         
-        const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby']
+        const allThemes = ['dark', 'modern', 'elegant', 'minimalist', 'vibrant']
         document.documentElement.classList.remove(...allThemes)
         if (savedTheme !== 'light') {
           document.documentElement.classList.add(savedTheme)
@@ -140,7 +140,7 @@ export default function AgendaPage() {
     setTheme(newTheme)
     localStorage.setItem('theme', newTheme)
     
-    const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby']
+    const allThemes = ['dark', 'modern', 'elegant', 'minimalist', 'vibrant']
     document.documentElement.classList.remove(...allThemes)
     if (newTheme !== 'light') {
       document.documentElement.classList.add(newTheme)

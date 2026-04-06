@@ -20,6 +20,7 @@ export interface Perfil {
   nome_exibicao: string;
   logo_url?: string;
   avatar_url?: string;
+  theme?: string;
 }
 
 export interface Anamnese {

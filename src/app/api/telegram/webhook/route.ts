@@ -250,6 +250,21 @@ export async function POST(request: Request) {
         responseMessage = `✨ <b>Olá!</b> ✨\n\nNão há agendamentos para o próximo mês (${format(nextMonth, 'MMMM', { locale: ptBR })}).`;
       }
     }
+    // LÓGICA 5: /remove (Remover Chat ID)
+    else if (text.startsWith('/remove')) {
+      const { error: deleteError } = await supabaseAdmin
+        .from('configuracoes')
+        .delete()
+        .eq('user_id', userId)
+        .eq('valor', chatId);
+
+      if (deleteError) {
+        console.error('[Telegram Webhook] Erro ao remover Chat ID:', deleteError);
+        responseMessage = `❌ <b>Erro</b>\n\nHouve um problema ao remover seu Chat ID do sistema.`;
+      } else {
+        responseMessage = `✅ <b>Sucesso!</b>\n\nSeu Chat ID (<code>${chatId}</code>) foi removido com sucesso de todos os destinatários no I Lash Studio.\n\nPara voltar a receber notificações, adicione seu ID novamente no painel administrativo.`;
+      }
+    }
 
     if (responseMessage) {
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

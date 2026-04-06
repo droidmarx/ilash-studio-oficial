@@ -103,6 +103,12 @@ export default function AgendaPage() {
         getProfile().then(p => {
           if (p) {
             setPerfil(p)
+            
+            // Sincroniza Tema do Perfil se disponível
+            if (p.theme && p.theme !== theme) {
+              toggleTheme(p.theme);
+            }
+
             // Sincroniza Avatar do Google (PASSO 11)
             const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
             if (googleAvatar && p.avatar_url !== googleAvatar) {
@@ -387,7 +393,7 @@ export default function AgendaPage() {
             )}
             {perfil && (
               <p className="text-[11px] font-bold text-primary/40 tracking-widest mt-8 pb-4">
-                Seu link: <span className="text-primary/60">ilash-studio-oficial.vercel.app/s/{perfil.slug}</span>
+                Seu link: <a href={`/s/${perfil.slug}`} target="_blank" className="text-primary/60 hover:text-primary underline underline-offset-4 transition-colors">ilash-studio-oficial.vercel.app/s/{perfil.slug}</a>
               </p>
             )}
           </div>

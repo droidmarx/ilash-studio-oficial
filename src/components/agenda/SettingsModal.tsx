@@ -212,8 +212,8 @@ export function SettingsModal({
       }
 
       const p = perfil as Perfil;
-      if (p.nome_exibicao || p.slug) {
-        await updateProfile(p);
+      if (p.nome_exibicao || p.slug || theme) {
+        await updateProfile({ ...p, theme });
       }
 
 
@@ -320,7 +320,7 @@ export function SettingsModal({
           <TabsContent value="robo" className="space-y-6 outline-none">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Destinatários Telegram (Bot: @ilashnotificationbot)</Label>
+                <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Destinatários Telegram (Bot: <a href="https://t.me/ilashnotificationbot" target="_blank" className="underline hover:text-primary transition-colors">@ilashnotificationbot</a>)</Label>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" onClick={handleTestToken} disabled={testingToken} className="h-8 rounded-full text-[10px]">Testar</Button>
                   <Button size="sm" onClick={handleAddRecipient} disabled={recipients.length >= 5} className="h-8 rounded-full text-[10px]">Add</Button>

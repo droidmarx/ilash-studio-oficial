@@ -120,6 +120,16 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
     }
     fetchConfig();
   }, [perfil])
+
+  useEffect(() => {
+    if (perfil?.theme) {
+      const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby'];
+      document.documentElement.classList.remove(...allThemes);
+      if (perfil.theme !== 'light') {
+        document.documentElement.classList.add(perfil.theme);
+      }
+    }
+  }, [perfil])
   
   const days = eachDayOfInterval({
     start: addDays(startOfToday(), 1),

@@ -251,7 +251,7 @@ export async function POST(request: Request) {
       }
     }
     // LÓGICA 5: /remove (Remover Chat ID)
-    else if (text.startsWith('/remove')) {
+    else if (text === '/remove' || text === '/remover') {
       const { error: deleteError } = await supabaseAdmin
         .from('configuracoes')
         .delete()
@@ -260,7 +260,7 @@ export async function POST(request: Request) {
 
       if (deleteError) {
         console.error('[Telegram Webhook] Erro ao remover Chat ID:', deleteError);
-        responseMessage = `❌ <b>Erro</b>\n\nHouve um problema ao remover seu Chat ID do sistema.`;
+        responseMessage = `❌ <b>Erro</b>\n\nHouve um problema ao remover seu Chat ID do sistema.\nErro técnico: ${deleteError.message}`;
       } else {
         responseMessage = `✅ <b>Sucesso!</b>\n\nSeu Chat ID (<code>${chatId}</code>) foi removido com sucesso de todos os destinatários no I Lash Studio.\n\nPara voltar a receber notificações, adicione seu ID novamente no painel administrativo.`;
       }

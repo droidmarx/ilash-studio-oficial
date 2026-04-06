@@ -462,6 +462,21 @@ export async function getProfile(): Promise<Perfil | null> {
     return created;
   }
 
+  // Busca extras
+  const { data: extras } = await supabase
+    .from('configuracoes')
+    .select('valor')
+    .eq('user_id', user.id)
+    .eq('nome', 'PERFIL_EXTRAS')
+    .maybeSingle();
+    
+  if (extras?.valor) {
+    try {
+      const parsed = JSON.parse(extras.valor);
+      Object.assign(data, parsed);
+    } catch {}
+  }
+
   return data;
 }
 
@@ -472,7 +487,22 @@ export async function getProfileBySlug(slug: string): Promise<Perfil | null> {
     .ilike('slug', slug)
     .maybeSingle();
   
-  if (error) return null;
+  if (data) {
+    const { data: extras } = await supabase
+      .from('configuracoes')
+      .select('valor')
+      .eq('user_id', data.id)
+      .eq('nome', 'PERFIL_EXTRAS')
+      .maybeSingle();
+
+    if (extras?.valor) {
+      try {
+        const parsed = JSON.parse(extras.valor);
+        Object.assign(data, parsed);
+      } catch {}
+    }
+  }
+
   return data;
 }
 
@@ -494,17 +524,50 @@ export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Usuário não autenticado");
 
-  // Removemos o ID do objeto de update para não tentar sobrescrever a PK se já enviada
-  const { id, ...updateData } = perfil as any;
+  // Removemos extras para não falhar no update do DB
+  const { id, theme, avatar_url, logo_url, ...updateData } = perfil as any;
 
-  const { error } = await supabase
-    .from('perfis')
-    .update(updateData)
-    .eq('id', user.id);
-  
-  if (error) {
-    console.error("Erro ao atualizar perfil:", error);
-    throw error;
+  // Só faz update se houver algo para o `perfis`
+  if (Object.keys(updateData).length > 0) {
+    const { error } = await supabase
+      .from('perfis')
+      .update(updateData)
+      .eq('id', user.id);
+    
+    if (error) {
+      console.error("Erro ao atualizar perfil:", error);
+      throw error;
+    }
+  }
+
+  // Prepara e salva as chaves extras na tabela de configuracoes
+  const extras = { theme, avatar_url, logo_url };
+  // Busca o valor atual para mesclar
+  const { data: currentExtras } = await supabase
+    .from('configuracoes')
+    .select('valor')
+    .eq('user_id', user.id)
+    .eq('nome', 'PERFIL_EXTRAS')
+    .maybeSingle();
+    
+  let newExtras = extras;
+  if (currentExtras?.valor) {
+    try {
+       const parsed = JSON.parse(currentExtras.valor);
+       newExtras = { ...parsed, ...extras };
+       // remove undefineds
+       Object.keys(newExtras).forEach(key => {
+         const k = key as keyof typeof newExtras;
+         if (newExtras[k] === undefined) delete newExtras[k];
+       });
+    } catch {}
+  }
+
+  if (Object.keys(newExtras).length > 0 && Object.values(newExtras).some(v => v !== undefined)) {
+    const value = JSON.stringify(newExtras);
+    await supabase
+      .from('configuracoes')
+      .upsert({ user_id: user.id, nome: 'PERFIL_EXTRAS', valor: value }, { onConflict: 'user_id, nome' });
   }
 }
 

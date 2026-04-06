@@ -38,12 +38,12 @@ interface ThemeToggleProps {
 
 function ThemeToggle({ theme, toggleTheme }: ThemeToggleProps) {
   const themes = [
-    { id: 'light', name: 'Rose Gold', color: 'bg-[#f7c5b6]' },
-    { id: 'dark', name: 'Studio Escuro', color: 'bg-[#222]' },
-    { id: 'ocean', name: 'Oceano Prata', color: 'bg-[#153448] ring-[#8E9EAB]' },
-    { id: 'emerald', name: 'Esmeralda', color: 'bg-[#0a311b]' },
-    { id: 'amethyst', name: 'Ametista', color: 'bg-[#2a1738]' },
-    { id: 'ruby', name: 'Rubi', color: 'bg-[#400e16]' },
+    { id: 'light', name: 'Feminina', color: 'bg-[#FFF5F7] ring-[#E8A0BF]' },
+    { id: 'dark', name: 'Estúdio Escuro', color: 'bg-[#111111] ring-[#BF953F]' },
+    { id: 'modern', name: 'Moderna', color: 'bg-[#0F172A] ring-[#3B82F6]' },
+    { id: 'elegant', name: 'Elegante', color: 'bg-[#0B0B0B] ring-[#D4AF37]' },
+    { id: 'minimalist', name: 'Minimalista', color: 'bg-[#FFFFFF] ring-[#0F172A]' },
+    { id: 'vibrant', name: 'Vibrante', color: 'bg-[#1A1A1A] ring-[#FF006E]' },
   ]
 
   return (
@@ -54,12 +54,12 @@ function ThemeToggle({ theme, toggleTheme }: ThemeToggleProps) {
           onClick={() => toggleTheme(t.id)}
           title={t.name}
           className={cn(
-            "w-8 h-8 rounded-full border border-white/20 transition-all duration-300 flex items-center justify-center shadow-md hover:scale-110",
+            "w-8 h-8 rounded-full border border-border transition-all duration-300 flex items-center justify-center shadow-md hover:scale-110",
             t.color,
-            theme === t.id ? "border-foreground scale-110 ring-2 ring-foreground/20" : "opacity-80 hover:opacity-100"
+            theme === t.id ? "border-foreground scale-110 ring-2" : "opacity-80 hover:opacity-100"
           )}
         >
-          {theme === t.id && <Check size={14} className="text-white drop-shadow-md" />}
+          {theme === t.id && <Check size={14} className="text-foreground drop-shadow-md" />}
         </button>
       ))}
     </div>
@@ -287,7 +287,7 @@ export function SettingsModal({
             <TabsTrigger value="estilo" className="rounded-xl gap-2 h-10"><Sparkles size={16} /> <span className="hidden md:inline">Estilo</span></TabsTrigger>
           </TabsList>
 
-          <TabsContent value="studio" className="space-y-6 outline-none">
+          <TabsContent value="studio" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">
             <div className="space-y-4">
               <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Identidade</Label>
               <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
@@ -351,7 +351,7 @@ export function SettingsModal({
             </div>
           </TabsContent>
 
-          <TabsContent value="agenda" className="space-y-6 outline-none">
+          <TabsContent value="agenda" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">
             <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-6">
               <div className="flex items-center justify-between">
                 <Label className="font-bold flex items-center gap-2"><Palmtree size={18} /> Modo Férias</Label>
@@ -385,7 +385,7 @@ export function SettingsModal({
             </div>
           </TabsContent>
 
-          <TabsContent value="robo" className="space-y-6 outline-none">
+          <TabsContent value="robo" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Destinatários Telegram (Bot: <a href="https://t.me/ilashnotificationbot" target="_blank" className="underline hover:text-primary transition-colors">@ilashnotificationbot</a>)</Label>
@@ -410,7 +410,7 @@ export function SettingsModal({
 
           </TabsContent>
 
-          <TabsContent value="estilo" className="space-y-6 outline-none">
+          <TabsContent value="estilo" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">
             <div className="space-y-4">
               <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Tema do Sistema</Label>
               <div className="bg-muted/30 p-4 rounded-2xl border border-border flex items-center justify-between">

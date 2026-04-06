@@ -4,35 +4,34 @@
 
 @layer base {
   :root {
-    /* Pure Off-White Theme with Rose Gold */
-    --background: 30 20% 98%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 12 45% 70%; /* Rose Gold primary */
+    /* Feminina (Beleza / Lash / Estética) - Default */
+    --background: 348 100% 98%;
+    --foreground: 0 15% 36%;
+    --card: 350 67% 92%;
+    --card-foreground: 0 15% 36%;
+    --popover: 350 67% 92%;
+    --popover-foreground: 0 15% 36%;
+    --primary: 334 58% 77%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 12 20% 96%;
-    --secondary-foreground: 12 45% 70%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 12 45% 70%;
+    --secondary: 46 65% 52%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 10% 90%;
+    --muted-foreground: 0 15% 50%;
+    --accent: 334 58% 77%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 12 45% 70%;
+    --border: 350 40% 85%;
+    --input: 350 40% 85%;
+    --ring: 334 58% 77%;
     --radius: 2rem;
-    
-    --gold-grad: linear-gradient(to right, #b76e79, #f2bdcd, #e29a86, #f7c5b6); /* Rose Gold Grad */
+    --gold-grad: linear-gradient(to right, #D4AF37, #F5D061, #D4AF37);
     --sparkle-opacity: 0.6;
     --font-family: 'Poppins', sans-serif;
   }
 
   .dark {
-    /* Luxury Anthracite Theme (Preto Acinzentado) */
+    /* Estúdio Escuro (Luxury Anthracite Theme) */
     --background: 220 15% 7%;
     --foreground: 0 0% 98%;
     --card: 220 15% 10%;
@@ -57,100 +56,104 @@
     --sparkle-opacity: 0.8;
   }
 
-  .ocean {
-    --background: 210 30% 8%;
-    --foreground: 0 0% 98%;
-    --card: 210 30% 12%;
-    --card-foreground: 0 0% 98%;
-    --popover: 210 30% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 190 80% 60%;
-    --primary-foreground: 210 30% 8%;
-    --secondary: 210 30% 18%;
-    --secondary-foreground: 190 80% 60%;
-    --muted: 210 30% 18%;
-    --muted-foreground: 0 0% 75%;
-    --accent: 190 80% 70%;
-    --accent-foreground: 210 30% 8%;
+  .modern {
+    /* Moderna (Tech / Startup) */
+    --background: 222 47% 11%;
+    --foreground: 0 0% 100%;
+    --card: 217 33% 17%;
+    --card-foreground: 0 0% 100%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 258 90% 66%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 217 33% 25%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 142 71% 45%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 210 30% 25%;
-    --input: 210 30% 25%;
-    --ring: 190 80% 60%;
-    --gold-grad: linear-gradient(to right, #00c6ff, #0072ff, #243B55);
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
+    --ring: 217 91% 60%;
+    --gold-grad: linear-gradient(to right, #3B82F6, #8B5CF6, #22C55E);
     --sparkle-opacity: 0.8;
   }
 
-  .emerald {
-    --background: 160 40% 6%;
-    --foreground: 0 0% 98%;
-    --card: 160 40% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 160 40% 10%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 145 70% 50%;
-    --primary-foreground: 160 40% 6%;
-    --secondary: 160 40% 15%;
-    --secondary-foreground: 145 70% 50%;
-    --muted: 160 40% 15%;
-    --muted-foreground: 0 0% 75%;
-    --accent: 145 70% 60%;
-    --accent-foreground: 160 40% 6%;
+  .elegant {
+    /* Elegante (Luxo / Premium) */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 46 65% 52%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 81%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 46 65% 60%;
+    --accent-foreground: 0 0% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 160 40% 20%;
-    --input: 160 40% 20%;
-    --ring: 145 70% 50%;
-    --gold-grad: linear-gradient(to right, #11998e, #38ef7d);
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 46 65% 52%;
+    --gold-grad: linear-gradient(to right, #D4AF37, #FFDF73, #D4AF37);
     --sparkle-opacity: 0.8;
   }
 
-  .amethyst {
-    --background: 280 30% 8%;
-    --foreground: 0 0% 98%;
-    --card: 280 30% 12%;
-    --card-foreground: 0 0% 98%;
-    --popover: 280 30% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 275 70% 65%;
-    --primary-foreground: 280 30% 10%;
-    --secondary: 280 30% 18%;
-    --secondary-foreground: 275 70% 65%;
-    --muted: 280 30% 18%;
-    --muted-foreground: 0 0% 75%;
-    --accent: 275 70% 75%;
-    --accent-foreground: 280 30% 10%;
+  .minimalist {
+    /* Minimalista (Clean / Profissional) */
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 210 40% 96%;
+    --card-foreground: 222 47% 11%;
+    --popover: 210 40% 96%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 90%;
+    --muted-foreground: 215 25% 40%;
+    --accent: 215 25% 27%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 280 30% 25%;
-    --input: 280 30% 25%;
-    --ring: 275 70% 65%;
-    --gold-grad: linear-gradient(to right, #8e2de2, #4a00e0);
-    --sparkle-opacity: 0.8;
+    --border: 213 27% 84%;
+    --input: 213 27% 84%;
+    --ring: 222 47% 11%;
+    --gold-grad: linear-gradient(to right, #0F172A, #334155);
+    --sparkle-opacity: 0.4;
   }
 
-  .ruby {
-    --background: 355 40% 7%;
-    --foreground: 0 0% 98%;
-    --card: 355 40% 12%;
-    --card-foreground: 0 0% 98%;
-    --popover: 355 40% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 350 80% 55%;
-    --primary-foreground: 355 40% 7%;
-    --secondary: 355 40% 18%;
-    --secondary-foreground: 350 80% 55%;
-    --muted: 355 40% 18%;
-    --muted-foreground: 0 0% 75%;
-    --accent: 350 80% 65%;
-    --accent-foreground: 355 40% 7%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 355 40% 25%;
-    --input: 355 40% 25%;
-    --ring: 350 80% 55%;
-    --gold-grad: linear-gradient(to right, #cb2d3e, #ef473a);
-    --sparkle-opacity: 0.8;
+  .vibrant {
+    /* Vibrante (Chamativo / Jovem) */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 334 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 265 83% 57%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 217 100% 61%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 44 100% 52%;
+    --destructive-foreground: 0 0% 10%;
+    --border: 334 100% 50%;
+    --input: 0 0% 20%;
+    --ring: 265 83% 57%;
+    --gold-grad: linear-gradient(to right, #FF006E, #8338EC, #3A86FF, #FB5607, #FFBE0B);
+    --sparkle-opacity: 0.9;
   }
 }
 

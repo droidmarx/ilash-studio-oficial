@@ -122,11 +122,12 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
   }, [perfil])
 
   useEffect(() => {
-    if (perfil?.theme) {
+    if (perfil) {
+      const themeToApply = perfil.theme || 'dark';
       const allThemes = ['dark', 'ocean', 'emerald', 'amethyst', 'ruby'];
       document.documentElement.classList.remove(...allThemes);
-      if (perfil.theme !== 'light') {
-        document.documentElement.classList.add(perfil.theme);
+      if (themeToApply !== 'light') {
+        document.documentElement.classList.add(themeToApply);
       }
     }
   }, [perfil])
@@ -353,7 +354,11 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
           </div>
 
           <div className="pt-4">
-            <Crown className="text-primary mx-auto opacity-40" size={32} />
+          {perfil?.logo_url || perfil?.avatar_url ? (
+            <img src={perfil.logo_url || perfil.avatar_url!} alt="Logo do Studio" className="w-full h-full object-cover" />
+          ) : (
+            <Crown className="text-primary opacity-50" size={40} />
+          )}
           </div>
         </div>
       </div>
@@ -419,13 +424,10 @@ export default function DynamicBookingPage({ params }: { params: Promise<{ slug:
                <div className="absolute inset-0 bg-primary/20 blur-[50px] rounded-full scale-125 -z-10" />
                {perfil.avatar_url || perfil.logo_url ? (
                   <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-background">
-                    <Image 
+                    <img 
                       src={perfil.avatar_url || perfil.logo_url!} 
                       alt={perfil.nome_exibicao} 
-                      fill 
-                      className="object-cover"
-                      priority
-                      unoptimized
+                      className="w-full h-full object-cover"
                     />
                   </div>
                ) : (

@@ -4,7 +4,7 @@
 import { useState } from "react"
 import { format, parseISO, addDays, getMonth, isValid } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Client, Anamnese } from "@/lib/api"
+import { Client, Anamnese, getCustomMessages } from "@/lib/api"
 import {
   Dialog,
   DialogContent,
@@ -62,7 +62,8 @@ export function EventModal({ day, events, birthdays, isOpen, loading, onClose, o
     
     if (event.whatsapp) {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const message = generateWhatsAppMessage(event, event.tipo, origin);
+      const customMsgs = await getCustomMessages();
+      const message = generateWhatsAppMessage(event, customMsgs.whatsappReminder, event.tipo, origin);
       const cleanPhone = event.whatsapp.replace(/\D/g, "");
       const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
       window.open(url, "_blank");

@@ -486,6 +486,7 @@ export default function AgendaPage() {
                 clients={clients} 
                 onEdit={editAppointment} 
                 onDelete={removeAppointment}
+                onAddNew={(date) => { handleOpenAddModal(date); }}
                 loading={loading}
               />
             </TabsContent>

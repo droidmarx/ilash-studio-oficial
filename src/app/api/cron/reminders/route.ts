@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getTelegramToken, defaultTelegramSettings } from '@/lib/api';
+import { getTelegramToken, defaultTelegramSettings, defaultCustomMessages } from '@/lib/api';
 import { addHours, subMinutes, addMinutes, parseISO, isWithinInterval, format, parse, isValid, subHours, isSameDay } from 'date-fns';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { toZonedTime } from 'date-fns-tz';
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     for (const userId in configsByUser) {
       const userConfigs = configsByUser[userId];
       const adminRecipients = userConfigs.filter((r: any) => 
-        !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL'].includes(r.nome) && r.valor
+        !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'CUSTOM_MESSAGES'].includes(r.nome) && r.valor
       );
 
       if (adminRecipients.length === 0) continue;
@@ -111,8 +111,14 @@ export async function GET(request: Request) {
           } catch { return false; }
         });
 
+        const rawCustomMsgs = userConfigs.find((r: any) => r.nome === 'CUSTOM_MESSAGES')?.valor;
+        const customMsgs = rawCustomMsgs ? JSON.parse(rawCustomMsgs) : defaultCustomMessages;
+
         for (const app of upcoming) {
-          const msg = `⏰ <b>Lembrete:</b> ${app.nome} às ${format(parseISO(app.data), 'HH:mm')}`;
+          let msg = customMsgs.telegramReminder;
+          msg = msg.replace(/{{cliente}}/g, app.nome);
+          msg = msg.replace(/{{hora}}/g, format(parseISO(app.data), 'HH:mm'));
+
           for (const admin of adminRecipients) {
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
               method: 'POST',

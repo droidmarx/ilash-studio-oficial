@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from "react"
-import { Client, Anamnese } from "@/lib/api"
+import { Client, Anamnese, getCustomMessages } from "@/lib/api"
 import { 
   Table, 
   TableBody, 
@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, Edit2, Trash2, User, Send, Cake, ClipboardList, Loader2, CheckCircle2, Sparkles } from "lucide-react"
+import { Search, Edit2, Trash2, User, Send, Cake, ClipboardList, Loader2, CheckCircle2, Sparkles, PlusCircle } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   AlertDialog, 
@@ -38,9 +38,10 @@ interface ClientsManagerProps {
   loading?: boolean
   onEdit: (id: string, data: any) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  onAddNew?: (date?: Date) => void
 }
 
-export function ClientsManager({ clients, loading, onEdit, onDelete }: ClientsManagerProps) {
+export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }: ClientsManagerProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [anamneseClient, setAnamneseClient] = useState<Client | null>(null)
@@ -77,7 +78,8 @@ export function ClientsManager({ clients, loading, onEdit, onDelete }: ClientsMa
     
     if (client.whatsapp) {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const message = generateWhatsAppMessage(client, client.tipo, origin);
+      const customMsgs = await getCustomMessages();
+      const message = generateWhatsAppMessage(client, customMsgs.whatsappReminder, client.tipo, origin);
       const cleanPhone = client.whatsapp.replace(/\D/g, "");
       const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
       window.open(url, "_blank");
@@ -98,15 +100,26 @@ export function ClientsManager({ clients, loading, onEdit, onDelete }: ClientsMa
           <User className="text-primary" />
           Gerenciamento de Clientes
         </CardTitle>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/40" size={18} />
-          <Input 
-            placeholder="Pesquisar por nome ou serviço..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 rounded-xl bg-background/50 border-border h-12"
-            disabled={loading}
-          />
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="relative flex-1 w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/40" size={18} />
+            <Input 
+              placeholder="Pesquisar por nome ou serviço..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 rounded-xl bg-background/50 border-border h-12"
+              disabled={loading}
+            />
+          </div>
+          {onAddNew && (
+            <Button 
+              onClick={() => onAddNew()} 
+              disabled={loading}
+              className="h-12 px-6 rounded-xl bg-gold-gradient text-primary-foreground font-bold shadow-lg hover:scale-105 transition-transform"
+            >
+              <PlusCircle className="mr-2" size={20} /> Novo Agendamento
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-0 md:p-8">

@@ -66,6 +66,11 @@ export interface TelegramSettings {
   reminder2h: boolean;
 }
 
+export interface CustomMessages {
+  whatsappReminder: string;
+  telegramReminder: string;
+}
+
 export const defaultWorkingHours: WorkingHours = {
   dom: { active: false, start: "09:00", end: "18:00" },
   seg: { active: true, start: "09:00", end: "18:00" },
@@ -84,6 +89,28 @@ export const defaultVacationMode: VacationMode = {
 export const defaultTelegramSettings: TelegramSettings = {
   dailySummary: true,
   reminder2h: true,
+};
+
+export const defaultCustomMessages: CustomMessages = {
+  whatsappReminder: `💖*Lembrete de agendamento*
+
+Olá *{{cliente}}*, tudo bem?
+
+✨ Sua *{{tipo}}* de cílios está agendada para *{{dia_semana}}*, dia *{{data}}*.
+
+Confira os detalhes abaixo:
+
+⏰ Horário: {{hora}}
+🎨 Técnica: {{tecnica}} (R$ {{valor_base}}){{adicionais}}
+💰 *Total: R$ {{valor_total}}*
+
+📌 Em caso de atraso, por favor avise com pelo menos 2 horas de antecedência.
+
+📌 Se houver necessidade de remarcar, peço que avise com no mínimo 1 dia de antecedência.
+
+Em caso de dúvidas ou imprevistos, é só me chamar! 💬
+Agradeço pela confiança 💕{{link_anamnese}}`,
+  telegramReminder: `⏰ <b>Lembrete:</b> {{cliente}} às {{hora}}`,
 };
 
 export const defaultTechniques: string[] = ["Brasileiro", "Egípcio", "4D", "5D", "Fio-a-Fio", "Fox"];
@@ -271,6 +298,35 @@ export async function updateTelegramConfig(settings: TelegramSettings): Promise<
   await supabase
     .from('configuracoes')
     .upsert({ user_id: user.id, nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'user_id, nome' });
+}
+
+export async function getCustomMessages(userId?: string): Promise<CustomMessages> {
+  try {
+    let query = supabase
+      .from('configuracoes')
+      .select('valor')
+      .eq('nome', 'CUSTOM_MESSAGES');
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.maybeSingle();
+    
+    if (error || !data) return defaultCustomMessages;
+    return JSON.parse(data.valor);
+  } catch {
+    return defaultCustomMessages;
+  }
+}
+
+export async function updateCustomMessages(messages: CustomMessages): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const value = JSON.stringify(messages);
+  await supabase
+    .from('configuracoes')
+    .upsert({ user_id: user.id, nome: 'CUSTOM_MESSAGES', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getTechniques(userId?: string): Promise<string[]> {

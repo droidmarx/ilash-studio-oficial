@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Client } from "@/lib/api"
+import { Client, getCustomMessages } from "@/lib/api"
 import { MessageSquare, Zap, RotateCw, Trash2, Star } from "lucide-react"
 import { cn, generateWhatsAppMessage } from "@/lib/utils"
 import { useState, useEffect } from "react"
@@ -23,9 +23,10 @@ interface ReminderDialogProps {
 export function ReminderDialog({ client, isOpen, onClose }: ReminderDialogProps) {
   if (!client) return null
 
-  const handleSend = (tipo: string) => {
+  const handleSend = async (tipo: string) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const message = generateWhatsAppMessage(client, tipo, origin);
+    const customMsgs = await getCustomMessages();
+    const message = generateWhatsAppMessage(client, customMsgs.whatsappReminder, tipo, origin);
 
     const cleanPhone = client.whatsapp?.replace(/\D/g, "") || "";
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;

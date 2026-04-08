@@ -32,7 +32,7 @@ export function parseBirthday(dateStr: string | undefined): Date | null {
 /**
  * Gera a mensagem de lembrete personalizada para o WhatsApp
  */
-export function generateWhatsAppMessage(event: Client, tipoOverride?: string, origin?: string) {
+export function generateWhatsAppMessage(event: Client, customTemplate?: string, tipoOverride?: string, origin?: string) {
   const getEventDate = (dataStr: string) => {
     try {
       if (dataStr.includes('T')) return parseISO(dataStr);
@@ -90,6 +90,21 @@ export function generateWhatsAppMessage(event: Client, tipoOverride?: string, or
     anamneseLinkMsg = `\n\n📝 *Ficha de Anamnese Digital:*
 Notei que sua ficha ainda não foi preenchida. Para agilizar seu atendimento, por favor preencha no link abaixo:
 🔗 ${link}`;
+  }
+
+  if (customTemplate) {
+    let msg = customTemplate;
+    msg = msg.replace(/{{cliente}}/g, event.nome.trim());
+    msg = msg.replace(/{{tipo}}/g, tipo.toLowerCase());
+    msg = msg.replace(/{{dia_semana}}/g, dayOfWeek);
+    msg = msg.replace(/{{data}}/g, formattedDate);
+    msg = msg.replace(/{{hora}}/g, formattedTime);
+    msg = msg.replace(/{{tecnica}}/g, event.servico);
+    msg = msg.replace(/{{valor_base}}/g, valorBaseStr);
+    msg = msg.replace(/{{valor_total}}/g, total.toFixed(2).replace(".", ","));
+    msg = msg.replace(/{{adicionais}}/g, msgAdicionais);
+    msg = msg.replace(/{{link_anamnese}}/g, anamneseLinkMsg);
+    return msg;
   }
 
   const message = `💖*Lembrete de agendamento*

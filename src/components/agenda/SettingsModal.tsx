@@ -27,7 +27,8 @@ import {
   getVacationMode, updateVacationMode, VacationMode, defaultVacationMode,
   getTelegramConfig, updateTelegramConfig, TelegramSettings, defaultTelegramSettings,
   getTechniques, updateTechniques, defaultTechniques,
-  getProfile, updateProfile, Perfil
+  getProfile, updateProfile, Perfil,
+  getCustomMessages, updateCustomMessages, CustomMessages, defaultCustomMessages
 } from "@/lib/api"
 
 
@@ -89,6 +90,7 @@ export function SettingsModal({
   const [vacationMode, setVacationMode] = useState<VacationMode>(defaultVacationMode)
   const [telegramConfig, setTelegramConfig] = useState<TelegramSettings>(defaultTelegramSettings)
   const [techniques, setTechniques] = useState<string[]>(defaultTechniques)
+  const [customMessages, setCustomMessages] = useState<CustomMessages>(defaultCustomMessages)
   const [newTechnique, setNewTechnique] = useState("")
   const [testingToken, setTestingToken] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -107,7 +109,7 @@ export function SettingsModal({
     try {
       const data = await getRecipients()
       const persons = data.filter(r => 
-        !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'PERFIL_EXTRAS'].includes(r.nome)
+        !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'PERFIL_EXTRAS', 'CUSTOM_MESSAGES'].includes(r.nome)
       )
       setRecipients(persons.slice(0, 3))
       
@@ -126,6 +128,9 @@ export function SettingsModal({
 
       const tks = await getTechniques()
       setTechniques(tks)
+
+      const msgs = await getCustomMessages()
+      setCustomMessages(msgs)
 
       const p = await getProfile()
       if (p) setPerfil(p as Perfil)
@@ -230,12 +235,13 @@ export function SettingsModal({
       await updateVacationMode(vacationMode);
       await updateTelegramConfig(telegramConfig);
       await updateTechniques(techniques);
+      await updateCustomMessages(customMessages);
 
       const remoteRecipients = await getRecipients()
       for (const remote of remoteRecipients) {
         const isSystemKey = [
           'SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 
-          'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'PERFIL_EXTRAS'
+          'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'PERFIL_EXTRAS', 'CUSTOM_MESSAGES'
         ].includes(remote.nome);
         if (!isSystemKey && !recipients.find(r => r.id === remote.id)) {
           await deleteRecipient(remote.id)
@@ -280,11 +286,12 @@ export function SettingsModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 bg-muted/50 p-1 rounded-2xl mb-8">
-            <TabsTrigger value="studio" className="rounded-xl gap-2 h-10"><Crown size={16} /> <span className="hidden md:inline">Studio</span></TabsTrigger>
-            <TabsTrigger value="agenda" className="rounded-xl gap-2 h-10"><Calendar size={16} /> <span className="hidden md:inline">Agenda</span></TabsTrigger>
-            <TabsTrigger value="robo" className="rounded-xl gap-2 h-10"><Bot size={16} /> <span className="hidden md:inline">Robô</span></TabsTrigger>
-            <TabsTrigger value="estilo" className="rounded-xl gap-2 h-10"><Sparkles size={16} /> <span className="hidden md:inline">Estilo</span></TabsTrigger>
+          <TabsList className="grid grid-cols-5 bg-muted/50 p-1 rounded-2xl mb-8 overflow-x-auto">
+            <TabsTrigger value="studio" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><Crown size={16} /> <span className="hidden md:inline">Studio</span></TabsTrigger>
+            <TabsTrigger value="agenda" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><Calendar size={16} /> <span className="hidden md:inline">Agenda</span></TabsTrigger>
+            <TabsTrigger value="robo" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><Bot size={16} /> <span className="hidden md:inline">Robô</span></TabsTrigger>
+            <TabsTrigger value="mensagens" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><MessageCircle size={16} /> <span className="hidden md:inline">Mensagens</span></TabsTrigger>
+            <TabsTrigger value="estilo" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><Sparkles size={16} /> <span className="hidden md:inline">Estilo</span></TabsTrigger>
           </TabsList>
 
           <TabsContent value="studio" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">
@@ -408,6 +415,36 @@ export function SettingsModal({
               </div>
             </div>
 
+          </TabsContent>
+
+          <TabsContent value="mensagens" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">
+            <div className="space-y-6">
+              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold flex items-center gap-2"><Send size={18} className="text-green-500" /> WhatsApp (Lembrete Personalizado)</Label>
+                  <Button variant="ghost" size="sm" onClick={() => setCustomMessages({...customMessages, whatsappReminder: defaultCustomMessages.whatsappReminder})} className="text-[10px] h-6 px-2 text-primary/60 hover:text-primary"><RefreshCw size={12} className="mr-1" /> Restaurar Padrão</Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground flex flex-wrap gap-1 leading-relaxed">Variáveis: <span className="font-mono bg-background px-1 rounded">{{cliente}}</span> <span className="font-mono bg-background px-1 rounded">{{tipo}}</span> <span className="font-mono bg-background px-1 rounded">{{dia_semana}}</span> <span className="font-mono bg-background px-1 rounded">{{data}}</span> <span className="font-mono bg-background px-1 rounded">{{hora}}</span> <span className="font-mono bg-background px-1 rounded">{{tecnica}}</span> <span className="font-mono bg-background px-1 rounded">{{valor_base}}</span> <span className="font-mono bg-background px-1 rounded">{{valor_total}}</span> <span className="font-mono bg-background px-1 rounded">{{adicionais}}</span> <span className="font-mono bg-background px-1 rounded">{{link_anamnese}}</span></p>
+                <Textarea 
+                  value={customMessages.whatsappReminder} 
+                  onChange={(e) => setCustomMessages({...customMessages, whatsappReminder: e.target.value})} 
+                  className="rounded-xl bg-background min-h-[150px] font-mono text-[10px] md:text-xs" 
+                />
+              </div>
+
+              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="font-bold flex items-center gap-2"><Bot size={18} className="text-blue-500" /> Telegram (Lembretes Automáticos)</Label>
+                  <Button variant="ghost" size="sm" onClick={() => setCustomMessages({...customMessages, telegramReminder: defaultCustomMessages.telegramReminder})} className="text-[10px] h-6 px-2 text-primary/60 hover:text-primary"><RefreshCw size={12} className="mr-1" /> Restaurar Padrão</Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground flex flex-wrap gap-1 leading-relaxed">Variáveis: <span className="font-mono bg-background px-1 rounded">{{cliente}}</span> <span className="font-mono bg-background px-1 rounded">{{hora}}</span></p>
+                <Textarea 
+                  value={customMessages.telegramReminder} 
+                  onChange={(e) => setCustomMessages({...customMessages, telegramReminder: e.target.value})} 
+                  className="rounded-xl bg-background min-h-[80px] font-mono text-[10px] md:text-xs" 
+                />
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="estilo" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">

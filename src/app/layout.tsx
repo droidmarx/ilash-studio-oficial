@@ -25,6 +25,7 @@ export const viewport: Viewport = {
 };
 
 import { AuthProvider } from '@/components/auth/AuthContext';
+import { SubscriptionGuard } from '@/components/auth/SubscriptionGuard';
 
 export default function RootLayout({
   children,
@@ -80,7 +81,9 @@ export default function RootLayout({
               />
             ))}
           </div>
-          {children}
+          <SubscriptionGuard>
+            {children}
+          </SubscriptionGuard>
         </AuthProvider>
       </body>
     </html>

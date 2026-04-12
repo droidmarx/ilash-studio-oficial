@@ -4,6 +4,7 @@ import { preApproval } from '@/lib/mercadopago';
 import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: Request) {
+  console.log('[API] Subscription create request received.');
   try {
     // 1. Authenticate user
     const authHeader = request.headers.get('authorization');
@@ -30,8 +31,10 @@ export async function POST(request: Request) {
       .single();
 
     if (profileError || !profile) {
+      console.error('[API] Profile not found for user:', user.id);
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
+    console.log('[API] Profile found:', profile.email);
 
     // 3. Fetch default Plan
     // Fallback to R$ 14,99 if table doesn't have it.
@@ -62,11 +65,13 @@ export async function POST(request: Request) {
       },
     };
 
+    console.log('[API] Creating Preapproval with MP:', preapprovalPayload);
     const response = await preApproval.create({ body: preapprovalPayload as any });
+    console.log('[API] MP Response Success:', response.id, response.init_point);
 
     return NextResponse.json({ init_point: response.init_point });
   } catch (error: any) {
-    console.error('Subscription Create Error:', error);
+    console.error('[API] Subscription Create Error Detail:', error);
     return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }

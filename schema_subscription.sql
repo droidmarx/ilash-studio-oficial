@@ -79,9 +79,11 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_logs ENABLE ROW LEVEL SECURITY;
 
 -- Allow reading plans for everyone
+DROP POLICY IF EXISTS "Allow public read on plans" ON public.plans;
 CREATE POLICY "Allow public read on plans" ON public.plans FOR SELECT USING (true);
 
 -- Allow reading your own subscription
+DROP POLICY IF EXISTS "Allow individual read on subscriptions" ON public.subscriptions;
 CREATE POLICY "Allow individual read on subscriptions" ON public.subscriptions FOR SELECT USING (auth.uid() = user_id);
 
 -- Define admin for droidmarx@gmail.com

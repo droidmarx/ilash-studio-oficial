@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Crown, CheckCircle2, ShieldCheck, Zap, LogOut } from 'lucide-react';
@@ -35,13 +36,14 @@ export default function SubscriptionPage() {
 
     const fetchStatus = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setLoading(false);
+          return;
+        }
+
         const response = await fetch('/api/subscription/status', {
-          headers: {
-             // Simulating auth header since we might be on client sending to Next.js API. 
-             // Normally Next.js API gets session from cookies with @supabase/ssr, 
-             // but here we manually pass the token since we use supabase-js client
-             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-          }
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
         });
         
         if (response.ok) {
@@ -58,38 +60,23 @@ export default function SubscriptionPage() {
       }
     };
 
-    // Need to import supabase for the token fix above.
-    // Let me dynamically import or just use the global one if possible. 
-    // It's better to fetch status.
-    import('@/lib/supabase').then(({ supabase }) => {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if(session) {
-          fetch('/api/subscription/status', {
-            headers: { 'Authorization': `Bearer ${session.access_token}` }
-          })
-          .then(res => res.json())
-          .then(data => setStatus(data))
-          .catch(err => {
-             console.error(err);
-             toast({ title: 'Erro', description: 'Não foi possível carregar o status.', variant: 'destructive' });
-          })
-          .finally(() => setLoading(false));
-        } else {
-          setLoading(false);
-        }
-      });
-    });
+    fetchStatus();
 
   }, [user, authLoading, router, toast]);
 
   const handleUpgrade = async () => {
+    console.log('[Frontend] handleUpgrade triggered');
     setCheckoutLoading(true);
     try {
-      const { supabase } = await import('@/lib/supabase');
+      console.log('[Frontend] Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) throw new Error('Not authenticated');
+      if (!session) {
+        console.warn('[Frontend] No session found');
+        throw new Error('Você precisa estar logado para assinar.');
+      }
 
+      console.log('[Frontend] Sending request to /api/subscription/create');
       const response = await fetch('/api/subscription/create', {
         method: 'POST',
         headers: {
@@ -98,15 +85,21 @@ export default function SubscriptionPage() {
       });
       
       const data = await response.json();
+      console.log('[Frontend] API Response:', data);
       if (data.init_point) {
         window.location.href = data.init_point;
       } else {
         throw new Error(data.error || 'Failed to create checkout');
       }
-    } catch (error) {
-      console.error(error);
-      toast({ title: 'Erro de Pagamento', description: 'Ocorreu um erro ao gerar o checkout.', variant: 'destructive' });
+    } catch (error: any) {
+      console.error('[Frontend] Upgrade Error:', error);
+      toast({ 
+        title: 'Erro de Pagamento', 
+        description: error.message || 'Ocorreu um erro ao gerar o checkout.', 
+        variant: 'destructive' 
+      });
     } finally {
+      console.log('[Frontend] handleUpgrade finished');
       setCheckoutLoading(false);
     }
   };

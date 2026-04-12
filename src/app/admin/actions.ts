@@ -4,23 +4,29 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { createClient } from '@supabase/supabase-js';
 
 async function checkAdmin(token: string) {
-    // Super-Admin Bypass with static password
+    // 🛡️ Super-Admin Bypass com senha estática
+    // Retorna true IMEDIATAMENTE sem consultar o banco se a senha for a correta.
     if (token === 'ilash105046') return true;
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: { user }, error: authError } = await supabaseAuthClient.auth.getUser(token);
-    
-    if (authError || !user) return false;
+    try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+        const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey);
+        const { data: { user }, error: authError } = await supabaseAuthClient.auth.getUser(token);
+        
+        if (authError || !user) return false;
 
-    const { data: profile } = await getSupabaseAdmin()
-        .from('perfis')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-    
-    return profile?.role === 'admin';
+        const { data: profile } = await getSupabaseAdmin()
+            .from('perfis')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+        
+        return profile?.role === 'admin';
+    } catch (e) {
+        console.error("Erro ao checar admin:", e);
+        return false;
+    }
 }
 
 export async function updateUserProfile(token: string, userId: string, data: any) {
@@ -212,5 +218,25 @@ export async function deleteUserCustomer(token: string, customerId: string) {
     } catch (err: any) {
         console.error('Server Action Error (deleteUserCustomer):', err);
         throw err;
+    }
+}
+
+export async function getServerHealth() {
+    try {
+        const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const hasServiceKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+        const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        
+        return {
+            status: 'ok',
+            config: {
+                hasUrl,
+                hasServiceKey,
+                hasAnonKey,
+                env: process.env.NODE_ENV
+            }
+        };
+    } catch (err: any) {
+        return { status: 'error', message: err.message };
     }
 }

@@ -15,7 +15,8 @@ import {
   fetchUserCustomers,
   updateUserCustomer,
   deleteUserCustomer,
-  updateUserProfile 
+  updateUserProfile,
+  getServerHealth
 } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,19 +90,37 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const activeToken = accessToken || getActiveToken();
+      
       const [usersData, planData] = await Promise.all([
         fetchUsers(activeToken),
         fetchPlan(activeToken)
       ]);
+      
       setUsers(usersData);
       setPlan(planData);
       setNewPrice(planData?.price?.toString() || '');
     } catch (error: any) {
       console.error(error);
-      if (isAuthorized) {
+      
+      // Se falhou, vamos rodar um diagnóstico
+      try {
+        const health = await getServerHealth();
+        const config = (health as any).config;
+        const diagnosticMsg = `Erros detectados: 
+          URL: ${config?.hasUrl ? '✅' : '❌'} 
+          ServiceKey: ${config?.hasServiceKey ? '✅' : '❌'} 
+          AnonKey: ${config?.hasAnonKey ? '✅' : '❌'}`;
+        
+        toast({ 
+          title: 'Erro de Servidor', 
+          description: diagnosticMsg, 
+          variant: 'destructive',
+          duration: 10000 
+        });
+      } catch (healthErr) {
         toast({ 
           title: 'Erro de Carregamento', 
-          description: error.message || 'Não foi possível buscar os dados.', 
+          description: error.message || 'Falha na comunicação com o servidor.', 
           variant: 'destructive' 
         });
       }

@@ -33,21 +33,15 @@ export default function AdminDashboard() {
     const savedAuth = sessionStorage.getItem('admin_auth');
     if (savedAuth === 'true') {
       setIsAuthorized(true);
+      // If we don't have a supabase session, we use the master password as token
+      loadData('ilash105046');
     }
     
-    if (authLoading) return;
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
+    // Check if we have a supabase user, but don't redirect if missing
     import('@/lib/supabase').then(({ supabase }) => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if(session) {
           setToken(session.access_token);
-          loadData(session.access_token);
-        } else {
-          router.push('/login');
         }
       });
     });
@@ -67,29 +61,35 @@ export default function AdminDashboard() {
   const loadData = async (accessToken: string) => {
     try {
       setLoading(true);
+      const activeToken = accessToken || getActiveToken();
       const [usersData, planData] = await Promise.all([
-         fetchUsers(accessToken),
-         fetchPlan(accessToken)
+         fetchUsers(activeToken),
+         fetchPlan(activeToken)
       ]);
       setUsers(usersData);
       setPlan(planData);
       setNewPrice(planData?.price?.toString() || '');
     } catch (error) {
       console.error(error);
-      toast({ title: 'Acesso Negado', description: 'Você não tem permissão para acessar esta página.', variant: 'destructive' });
-      router.push('/');
+      // Silently fail if just not authorized yet
+      if (isAuthorized) {
+        toast({ title: 'Erro de Carregamento', description: 'Não foi possível buscar os dados.', variant: 'destructive' });
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Helper to get current best token
+  const getActiveToken = () => token || 'ilash105046';
+
   const handleUpdatePrice = async () => {
     if (!newPrice) return;
     setActionLoading('price');
     try {
-      await updatePlanPrice(token, parseFloat(newPrice));
+      await updatePlanPrice(getActiveToken(), parseFloat(newPrice));
       toast({ title: 'Sucesso', description: 'Preço atualizado com sucesso.' });
-      loadData(token);
+      loadData(getActiveToken());
     } catch (error) {
        toast({ title: 'Erro', description: 'Falha ao atualizar preço.', variant: 'destructive' });
     } finally {
@@ -100,9 +100,9 @@ export default function AdminDashboard() {
   const handleExtendTrial = async (userId: string) => {
     setActionLoading(`extend-${userId}`);
     try {
-      await extendTrial(token, userId);
+      await extendTrial(getActiveToken(), userId);
       toast({ title: 'Sucesso', description: 'Mais 30 dias concedidos.' });
-      loadData(token);
+      loadData(getActiveToken());
     } catch (error) {
        toast({ title: 'Erro', description: 'Falha ao estender trial.', variant: 'destructive' });
     } finally {
@@ -114,9 +114,9 @@ export default function AdminDashboard() {
     if(!confirm("Tem certeza que deseja banir este usuário?")) return;
     setActionLoading(`ban-${userId}`);
     try {
-      await banUser(token, userId);
+      await banUser(getActiveToken(), userId);
       toast({ title: 'Sucesso', description: 'Usuário banido.' });
-      loadData(token);
+      loadData(getActiveToken());
     } catch (error) {
        toast({ title: 'Erro', description: 'Falha ao banir usuário.', variant: 'destructive' });
     } finally {

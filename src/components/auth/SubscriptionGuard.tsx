@@ -14,6 +14,11 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
+    // 0. Bypass for Admin Panel
+    if (pathname.startsWith('/admin')) {
+      return;
+    }
+
     if (authLoading) return;
 
     if (!user) {
@@ -65,6 +70,11 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
 
     checkAccess();
   }, [user, authLoading, pathname, router]);
+
+  // 0. Bypass for Admin Panel
+  if (pathname.startsWith('/admin')) {
+    return <>{children}</>;
+  }
 
   if (authLoading || (user && hasAccess === null)) {
     return (

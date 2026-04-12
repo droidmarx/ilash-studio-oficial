@@ -46,6 +46,9 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
         
       if (!profile) {
         setHasAccess(false);
+        // Se o usuário está logado mas o perfil sumiu, limpamos a sessão local
+        await supabase.auth.signOut();
+        router.push('/login');
         return;
       }
 

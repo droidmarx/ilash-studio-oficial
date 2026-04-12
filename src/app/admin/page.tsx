@@ -94,10 +94,14 @@ export default function AdminDashboard() {
       setUsers(usersData);
       setPlan(planData);
       setNewPrice(planData?.price?.toString() || '');
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       if (isAuthorized) {
-        toast({ title: 'Erro de Carregamento', description: 'Não foi possível buscar os dados.', variant: 'destructive' });
+        toast({ 
+          title: 'Erro de Carregamento', 
+          description: error.message || 'Não foi possível buscar os dados.', 
+          variant: 'destructive' 
+        });
       }
     } finally {
       setLoading(false);

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Loader2, Mail, Lock } from "lucide-react"
+import { Loader2, Mail, Lock, UserPlus, Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/components/auth/AuthContext"
@@ -15,8 +15,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [name, setName] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
@@ -35,6 +35,12 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
+        if (password !== confirmPassword) {
+          setError("As senhas não coincidem.")
+          setLoading(false)
+          return
+        }
+
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -138,14 +144,35 @@ export default function LoginPage() {
             <div className="relative">
               <Lock className="absolute left-3 top-3.5 text-primary/40" size={18} />
               <Input 
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Senha" 
-                className="pl-10 h-12 bg-background/50 border-primary/20 rounded-xl"
+                className="pl-10 pr-10 h-12 bg-background/50 border-primary/20 rounded-xl"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
               />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3.5 text-primary/40 hover:text-primary transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+
+            {isSignUp && (
+              <div className="relative animate-in slide-in-from-top-2 duration-300">
+                <Lock className="absolute left-3 top-3.5 text-primary/40" size={18} />
+                <Input 
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Confirme sua Senha" 
+                  className="pl-10 h-12 bg-background/50 border-primary/20 rounded-xl"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
+            )}
             <Button type="submit" disabled={loading} className="w-full h-12 rounded-xl bg-gold-gradient font-black uppercase tracking-widest">
               {loading ? <Loader2 className="animate-spin" /> : (isSignUp ? "CADASTRAR" : "ENTRAR")}
             </Button>

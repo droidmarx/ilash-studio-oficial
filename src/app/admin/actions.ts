@@ -28,7 +28,7 @@ export async function fetchUsers(token: string) {
 
     const { data, error } = await supabaseAdmin
         .from('perfis')
-        .select('id, email, nome_exibicao, subscription_status, trial_end, role, plan')
+        .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan')
         .order('id', { ascending: false });
 
     if (error) throw error;
@@ -108,6 +108,44 @@ export async function updateTrialEnd(token: string, userId: string, isoDate: str
             subscription_status: 'trial' // reset to trial so the date is respected
         })
         .eq('id', userId);
+
+    if (error) throw error;
+    return true;
+}
+
+// 🛡️ Super-Admin: Manage User Customers (Agendamentos)
+export async function fetchUserCustomers(token: string, userId: string) {
+    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    
+    const { data, error } = await supabaseAdmin
+        .from('agendamentos')
+        .select('*')
+        .eq('user_id', userId)
+        .order('data', { ascending: false });
+
+    if (error) throw error;
+    return data;
+}
+
+export async function updateUserCustomer(token: string, customerId: string, payload: any) {
+    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    
+    const { error } = await supabaseAdmin
+        .from('agendamentos')
+        .update(payload)
+        .eq('id', customerId);
+
+    if (error) throw error;
+    return true;
+}
+
+export async function deleteUserCustomer(token: string, customerId: string) {
+    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    
+    const { error } = await supabaseAdmin
+        .from('agendamentos')
+        .delete()
+        .eq('id', customerId);
 
     if (error) throw error;
     return true;

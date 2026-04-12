@@ -95,13 +95,31 @@ export default function AgendaPage() {
   const [showSplash, setShowSplash] = useState(true)
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
+  const [daysRemaining, setDaysRemaining] = useState<number | null>(null)
 
-  const daysRemaining = useMemo(() => {
-    if (!perfil?.trial_end) return null;
-    const end = new Date(perfil.trial_end);
-    const diff = differenceInDays(end, new Date());
-    return diff > 0 ? diff : 0;
-  }, [perfil]);
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (hasMounted && perfil?.trial_end) {
+      try {
+        const end = new Date(perfil.trial_end);
+        if (isNaN(end.getTime())) {
+          setDaysRemaining(null);
+        } else {
+          const diff = differenceInDays(end, new Date());
+          setDaysRemaining(diff > 0 ? diff : 0);
+        }
+      } catch (err) {
+        console.error("Erro ao calcular dias restantes:", err);
+        setDaysRemaining(null);
+      }
+    } else {
+      setDaysRemaining(null);
+    }
+  }, [hasMounted, perfil]);
 
   useEffect(() => {
     if (!authLoading) {

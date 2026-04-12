@@ -87,6 +87,10 @@ export function OnboardingTutorial({ isOpen, onComplete }: OnboardingTutorialPro
 
   const currentStepData = steps[step - 1]
 
+  if (!currentStepData && isOpen) {
+    return null;
+  }
+
   const nextStep = () => {
     if (step < steps.length) {
       setStep(step + 1)

@@ -34,7 +34,6 @@ export default function AdminDashboard() {
   const [newPrice, setNewPrice] = useState('');
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [token, setToken] = useState('');
 
   // Admin Login State
   const [adminUser, setAdminUser] = useState('');
@@ -52,20 +51,24 @@ export default function AdminDashboard() {
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
   const [customerModalLoading, setCustomerModalLoading] = useState(false);
 
+  const [hasMounted, setHasMounted] = useState(false);
+  const [token, setToken] = useState('');
+
   useEffect(() => {
+    setHasMounted(true);
     const savedAuth = sessionStorage.getItem('admin_auth');
     if (savedAuth === 'true') {
       setIsAuthorized(true);
       loadData('ilash105046');
     }
 
-    import('@/lib/supabase').then(({ supabase }) => {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          setToken(session.access_token);
-        }
-      });
-    });
+    // Usando import dinâmico simplificado ou apenas carregando o token
+    const fetchToken = async () => {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) setToken(session.access_token);
+    };
+    fetchToken();
   }, [user, authLoading, router]);
 
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -231,7 +234,7 @@ export default function AdminDashboard() {
     }
   };
 
-  if (authLoading || loading) {
+  if (!hasMounted || authLoading || loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

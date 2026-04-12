@@ -134,13 +134,22 @@ export function OnboardingTutorial({ isOpen, onComplete }: OnboardingTutorialPro
                   />
                 ))}
              </div>
-             <Button 
-               onClick={nextStep}
-               className="w-full h-14 rounded-2xl bg-gold-gradient text-primary-foreground font-black tracking-widest text-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2"
-             >
-               {step === steps.length ? "COMEÇAR AGORA" : "PRÓXIMO"}
-               <ArrowRight size={20} />
-             </Button>
+             <div className="flex flex-col gap-2">
+               <Button 
+                 onClick={nextStep}
+                 className="w-full h-14 rounded-2xl bg-gold-gradient text-primary-foreground font-black tracking-widest text-lg hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 shadow-xl"
+               >
+                 {step === steps.length ? "COMEÇAR AGORA" : "PRÓXIMO"}
+                 <ArrowRight size={20} />
+               </Button>
+               <Button 
+                 variant="ghost" 
+                 onClick={() => onComplete(chatId)}
+                 className="w-full text-[10px] text-primary/40 uppercase tracking-widest hover:bg-primary/5 rounded-xl h-10"
+               >
+                 Pular tutorial
+               </Button>
+             </div>
           </DialogFooter>
         </div>
       </DialogContent>

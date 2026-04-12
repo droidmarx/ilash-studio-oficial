@@ -174,12 +174,15 @@ export default function AgendaPage() {
     try {
       if (chatId) {
         await createRecipient({ nome: "Principal", chatID: chatId });
+        console.log("Recipient created successfully for chatId:", chatId);
       }
       await updateOnboardingStatus(true);
-      setIsOnboardingOpen(false);
+      console.log("Onboarding status updated in DB");
       setPerfil(prev => prev ? {...prev, onboarding_completed: true} : null);
     } catch (error) {
-      console.error("Erro ao completar onboarding:", error);
+      console.error("Erro crítico ao completar onboarding (o modal será fechado de qualquer forma):", error);
+    } finally {
+      setIsOnboardingOpen(false);
     }
   };
 

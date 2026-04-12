@@ -19,6 +19,11 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    // 0. Bypass for Admin Panel inside useEffect to stop redirect
+    if (pathname?.startsWith('/admin')) {
+      return;
+    }
+
     if (authLoading) return;
 
     if (!user) {

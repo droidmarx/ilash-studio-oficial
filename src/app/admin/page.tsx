@@ -173,10 +173,28 @@ export default function AdminDashboard() {
     }
   };
 
+  const safeFormatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'Inválido';
+      return format(date, 'dd/MM/yyyy', { locale: ptBR });
+    } catch (e) {
+      return 'Erro';
+    }
+  };
+
   const handleUpdateTrialDate = async (userId: string, newDate: string) => {
+    if (!newDate) {
+      toast({ title: 'Aviso', description: 'Selecione uma data válida.' });
+      return;
+    }
     setActionLoading(`date-${userId}`);
     try {
-      await updateTrialEnd(getActiveToken(), userId, new Date(newDate).toISOString());
+      const dateObj = new Date(newDate);
+      if (isNaN(dateObj.getTime())) throw new Error("Data inválida");
+      
+      await updateTrialEnd(getActiveToken(), userId, dateObj.toISOString());
       toast({ title: 'Sucesso', description: 'Data de vencimento atualizada.' });
       setEditingDate(null);
       loadData(getActiveToken());
@@ -358,11 +376,11 @@ export default function AdminDashboard() {
                   {users.map((u) => (
                     <TableRow key={u.id} className="border-primary/5 hover:bg-primary/5 transition-colors">
                       <TableCell>
-                        {editingUser?.id === u.id ? (
+                        {editingUser && editingUser.id === u.id ? (
                           <div className="space-y-2">
                              <Input 
                                value={editingUser.nome_exibicao}
-                               onChange={e => setEditingUser(prev => prev ? {...prev, nome_exibicao: e.target.value} : null)}
+                               onChange={e => setEditingUser({ ...editingUser, nome_exibicao: e.target.value })}
                                className="h-8 text-xs bg-background border-primary/20"
                                placeholder="Nome do Estúdio"
                              />
@@ -387,19 +405,19 @@ export default function AdminDashboard() {
                         </a>
                       </TableCell>
                       <TableCell className="text-[10px] font-mono whitespace-nowrap">
-                        {editingDate?.id === u.id ? (
+                        {editingDate && editingDate.id === u.id ? (
                           <div className="flex items-center gap-2">
                             <Input 
                               type="date" 
                               className="h-8 w-32 bg-background border-primary/20 p-1 text-[10px]"
                               value={editingDate.date}
-                              onChange={(e) => setEditingDate(prev => prev ? { ...prev, date: e.target.value } : null)}
+                              onChange={(e) => setEditingDate({ ...editingDate, date: e.target.value })}
                             />
                             <Button 
                               variant="ghost" 
                               size="icon" 
                               className="h-8 w-8 text-green-500 hover:text-green-400"
-                              onClick={() => handleUpdateTrialDate(u.id, editingDate!.date)}
+                              onClick={() => handleUpdateTrialDate(u.id, editingDate.date)}
                               disabled={actionLoading === `date-${u.id}`}
                             >
                               <Save size={14} />
@@ -407,7 +425,7 @@ export default function AdminDashboard() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            {u.trial_end ? format(new Date(u.trial_end), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
+                            {safeFormatDate(u.trial_end)}
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -420,13 +438,13 @@ export default function AdminDashboard() {
                         )}
                       </TableCell>
                       <TableCell>
-                         {editingUser?.id === u.id ? (
+                        {editingUser && editingUser.id === u.id ? (
                            <Input 
-                              type="number"
-                              step="0.01"
-                              value={editingUser.custom_price}
-                              onChange={e => setEditingUser(prev => prev ? {...prev, custom_price: e.target.value} : null)}
-                              className="h-8 w-20 text-xs bg-background border-primary/20"
+                               type="number"
+                               step="0.01"
+                               value={editingUser.custom_price}
+                               onChange={e => setEditingUser({ ...editingUser, custom_price: e.target.value })}
+                               className="h-8 w-20 text-xs bg-background border-primary/20"
                            />
                          ) : (
                            <span className="font-mono text-xs">R$ {u.custom_price || plan?.price || '0.00'}</span>
@@ -447,15 +465,15 @@ export default function AdminDashboard() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {editingUser?.id === u.id ? (
+                          {editingUser && editingUser.id === u.id ? (
                             <>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-8 w-8 text-green-500 hover:text-green-400"
                                 onClick={() => handleUpdateUserProfile(u.id, { 
-                                  nome_exibicao: editingUser!.nome_exibicao,
-                                  custom_price: parseFloat(editingUser!.custom_price) || null
+                                  nome_exibicao: editingUser.nome_exibicao,
+                                  custom_price: parseFloat(editingUser.custom_price) || null
                                 })}
                                 disabled={actionLoading === `user-upd-${u.id}`}
                               >

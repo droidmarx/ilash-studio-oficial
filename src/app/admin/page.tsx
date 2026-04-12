@@ -24,7 +24,17 @@ export default function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [token, setToken] = useState('');
 
+  // Admin Login State
+  const [adminUser, setAdminUser] = useState('');
+  const [adminPass, setAdminPass] = useState('');
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
   useEffect(() => {
+    const savedAuth = sessionStorage.getItem('admin_auth');
+    if (savedAuth === 'true') {
+      setIsAuthorized(true);
+    }
+    
     if (authLoading) return;
     if (!user) {
       router.push('/login');
@@ -42,6 +52,17 @@ export default function AdminDashboard() {
       });
     });
   }, [user, authLoading, router]);
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminUser === 'admin' && adminPass === 'ilash105046') {
+      setIsAuthorized(true);
+      sessionStorage.setItem('admin_auth', 'true');
+      toast({ title: 'Acesso Autorizado', description: 'Bem-vindo ao painel de controle.' });
+    } else {
+      toast({ title: 'Erro de Acesso', description: 'Usuário ou senha incorretos.', variant: 'destructive' });
+    }
+  };
 
   const loadData = async (accessToken: string) => {
     try {
@@ -107,6 +128,48 @@ export default function AdminDashboard() {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md bg-card/60 backdrop-blur-3xl border-primary/20 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+          <CardHeader className="text-center space-y-2 pb-8">
+            <div className="mx-auto w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mb-2">
+              <ShieldAlert className="text-primary w-10 h-10" />
+            </div>
+            <CardTitle className="text-3xl font-headline text-gold-gradient">Acesso Restrito</CardTitle>
+            <p className="text-xs tracking-widest uppercase text-muted-foreground">Área Administrativa do I Lash Studio</p>
+          </CardHeader>
+          <CardContent className="p-8 pt-0">
+            <form onSubmit={handleAdminLogin} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-primary/60">Usuário</label>
+                <Input 
+                  value={adminUser}
+                  onChange={e => setAdminUser(e.target.value)}
+                  className="bg-background/50 border-primary/10 h-12 rounded-xl focus:border-primary/40 focus:ring-0"
+                  placeholder="Seu usuário"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-primary/60">Senha</label>
+                <Input 
+                  type="password"
+                  value={adminPass}
+                  onChange={e => setAdminPass(e.target.value)}
+                  className="bg-background/50 border-primary/10 h-12 rounded-xl focus:border-primary/40 focus:ring-0"
+                  placeholder="••••••••"
+                />
+              </div>
+              <Button type="submit" className="w-full h-14 rounded-2xl bg-gold-gradient text-primary-foreground font-black tracking-widest text-lg hover:scale-[1.02] transition-transform">
+                ENTRAR NO PAINEL
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }

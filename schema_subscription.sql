@@ -20,7 +20,9 @@ ADD COLUMN IF NOT EXISTS plan text DEFAULT 'Premium',
 ADD COLUMN IF NOT EXISTS subscription_status text DEFAULT 'trial',
 ADD COLUMN IF NOT EXISTS mercadopago_subscription_id text,
 ADD COLUMN IF NOT EXISTS trial_end timestamp with time zone,
-ADD COLUMN IF NOT EXISTS subscription_current_period_end timestamp with time zone;
+ADD COLUMN IF NOT EXISTS subscription_current_period_end timestamp with time zone,
+ADD COLUMN IF NOT EXISTS custom_price numeric,
+ADD COLUMN IF NOT EXISTS onboarding_completed boolean DEFAULT false;
 
 -- 3. Create Subscriptions table
 CREATE TABLE IF NOT EXISTS public.subscriptions (

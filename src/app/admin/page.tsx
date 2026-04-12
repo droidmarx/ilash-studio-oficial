@@ -12,14 +12,15 @@ import {
   updateTrialEnd,
   fetchUserCustomers,
   updateUserCustomer,
-  deleteUserCustomer 
+  deleteUserCustomer,
+  updateUserProfile 
 } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, LogOut, CheckCircle, Clock, Ban, Trash2, Calendar as CalendarIcon, Save, Eye, EyeOff, ExternalLink, Users } from 'lucide-react';
+import { Loader2, ShieldAlert, LogOut, CheckCircle, Clock, Ban, Trash2, Calendar as CalendarIcon, Save, Eye, EyeOff, ExternalLink, Users, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -43,6 +44,7 @@ export default function AdminDashboard() {
 
   // Edit State
   const [editingDate, setEditingDate] = useState<{id: string, date: string} | null>(null);
+  const [editingUser, setEditingUser] = useState<{id: string, nome_exibicao: string, custom_price: string} | null>(null);
 
   // Manage Customers State
   const [managingUser, setManagingUser] = useState<any | null>(null);
@@ -110,6 +112,24 @@ export default function AdminDashboard() {
       loadData(getActiveToken());
     } catch (error) {
       toast({ title: 'Erro', description: 'Falha ao atualizar preço.', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUpdateUserProfile = async (userId: string, data: any) => {
+    setActionLoading(`user-upd-${userId}`);
+    try {
+      await updateUserProfile(getActiveToken(), userId, data);
+      toast({ title: 'Sucesso', description: 'Perfil do usuário atualizado.' });
+      setEditingUser(null);
+      loadData(getActiveToken());
+    } catch (error: any) {
+       toast({ 
+         title: 'Erro', 
+         description: error.message || 'Falha ao atualizar perfil.', 
+         variant: 'destructive' 
+       });
     } finally {
       setActionLoading(null);
     }
@@ -319,10 +339,11 @@ export default function AdminDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-primary/10 bg-primary/5">
-                    <TableHead className="text-primary/50 text-[10px] uppercase font-black">Usuário</TableHead>
+                    <TableHead className="text-primary/50 text-[10px] uppercase font-black">Usuário / Estúdio</TableHead>
                     <TableHead className="text-primary/50 text-[10px] uppercase font-black">Slug / Link</TableHead>
-                    <TableHead className="text-primary/50 text-[10px] uppercase font-black">Status</TableHead>
                     <TableHead className="text-primary/50 text-[10px] uppercase font-black">Vencimento</TableHead>
+                    <TableHead className="text-primary/50 text-[10px] uppercase font-black">Preço (R$)</TableHead>
+                    <TableHead className="text-primary/50 text-[10px] uppercase font-black">Status</TableHead>
                     <TableHead className="text-right text-primary/50 text-[10px] uppercase font-black">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -330,34 +351,33 @@ export default function AdminDashboard() {
                   {users.map((u) => (
                     <TableRow key={u.id} className="border-primary/5 hover:bg-primary/5 transition-colors">
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-sm text-primary/90">{u.nome_exibicao || 'Usuário Sem Nome'}</span>
-                          <span className="text-[10px] text-primary/40 font-mono">{u.email}</span>
-                        </div>
+                        {editingUser?.id === u.id ? (
+                          <div className="space-y-2">
+                             <Input 
+                               value={editingUser.nome_exibicao}
+                               onChange={e => setEditingUser(prev => prev ? {...prev, nome_exibicao: e.target.value} : null)}
+                               className="h-8 text-xs bg-background border-primary/20"
+                               placeholder="Nome do Estúdio"
+                             />
+                             <span className="text-[10px] text-primary/40 font-mono">{u.email}</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col">
+                            <span className="font-bold text-sm text-primary/90">{u.nome_exibicao || 'Usuário Sem Nome'}</span>
+                            <span className="text-[10px] text-primary/40 font-mono">{u.email}</span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <a 
-                          href={`/${u.slug}`} 
+                          href={`/s/${u.slug}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="flex items-center gap-1 text-primary/60 hover:text-primary transition-colors text-[10px] font-mono group"
                         >
-                          {u.slug}
+                          /s/{u.slug}
                           <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                         </a>
-                      </TableCell>
-                      <TableCell>
-                        {u.subscription_status === 'authorized' ? (
-                          <div className="flex items-center gap-2 text-green-500 bg-green-500/10 px-3 py-1 rounded-full w-fit border border-green-500/20">
-                            <CheckCircle size={12} />
-                            <span className="text-[10px] font-black uppercase">Ativo</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-primary/40 bg-primary/5 px-3 py-1 rounded-full w-fit border border-primary/10">
-                            <Clock size={12} />
-                            <span className="text-[10px] font-black uppercase">Trial</span>
-                          </div>
-                        )}
                       </TableCell>
                       <TableCell className="text-[10px] font-mono whitespace-nowrap">
                         {editingDate?.id === u.id ? (
@@ -366,13 +386,13 @@ export default function AdminDashboard() {
                               type="date" 
                               className="h-8 w-32 bg-background border-primary/20 p-1 text-[10px]"
                               value={editingDate.date}
-                              onChange={(e) => setEditingDate({ ...editingDate, date: e.target.value })}
+                              onChange={(e) => setEditingDate(prev => prev ? { ...prev, date: e.target.value } : null)}
                             />
                             <Button 
                               variant="ghost" 
                               size="icon" 
                               className="h-8 w-8 text-green-500 hover:text-green-400"
-                              onClick={() => handleUpdateTrialDate(u.id, editingDate.date)}
+                              onClick={() => handleUpdateTrialDate(u.id, editingDate!.date)}
                               disabled={actionLoading === `date-${u.id}`}
                             >
                               <Save size={14} />
@@ -392,8 +412,71 @@ export default function AdminDashboard() {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell>
+                         {editingUser?.id === u.id ? (
+                           <Input 
+                              type="number"
+                              step="0.01"
+                              value={editingUser.custom_price}
+                              onChange={e => setEditingUser(prev => prev ? {...prev, custom_price: e.target.value} : null)}
+                              className="h-8 w-20 text-xs bg-background border-primary/20"
+                           />
+                         ) : (
+                           <span className="font-mono text-xs">R$ {u.custom_price || plan?.price || '0.00'}</span>
+                         )}
+                      </TableCell>
+                      <TableCell>
+                        {u.subscription_status === 'authorized' ? (
+                          <div className="flex items-center gap-2 text-green-500 bg-green-500/10 px-3 py-1 rounded-full w-fit border border-green-500/20">
+                            <CheckCircle size={12} />
+                            <span className="text-[10px] font-black uppercase">Ativo</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-primary/40 bg-primary/5 px-3 py-1 rounded-full w-fit border border-primary/10">
+                            <Clock size={12} />
+                            <span className="text-[10px] font-black uppercase">Trial</span>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {editingUser?.id === u.id ? (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-green-500 hover:text-green-400"
+                                onClick={() => handleUpdateUserProfile(u.id, { 
+                                  nome_exibicao: editingUser!.nome_exibicao,
+                                  custom_price: parseFloat(editingUser!.custom_price) || null
+                                })}
+                                disabled={actionLoading === `user-upd-${u.id}`}
+                              >
+                                {actionLoading === `user-upd-${u.id}` ? <Loader2 className="animate-spin" size={12} /> : <Save size={14} />}
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-primary/30 hover:text-primary"
+                                onClick={() => setEditingUser(null)}
+                              >
+                                <LogOut size={14} />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 px-3 rounded-xl border-primary/10 text-[10px] font-black uppercase tracking-tighter hover:bg-primary/10"
+                              onClick={() => setEditingUser({ 
+                                id: u.id, 
+                                nome_exibicao: u.nome_exibicao || '', 
+                                custom_price: u.custom_price?.toString() || '' 
+                              })}
+                            >
+                              <Settings size={12} className="mr-1" /> Editar
+                            </Button>
+                          )}
                           <Button 
                           variant="outline" 
                           size="sm" 

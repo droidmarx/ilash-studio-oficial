@@ -23,6 +23,18 @@ async function checkAdmin(token: string) {
     return profile?.role === 'admin';
 }
 
+export async function updateUserProfile(token: string, userId: string, data: any) {
+    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+
+    const { error } = await supabaseAdmin
+        .from('perfis')
+        .update(data)
+        .eq('id', userId);
+
+    if (error) throw error;
+    return true;
+}
+
 export async function fetchUsers(token: string) {
     if (!await checkAdmin(token)) throw new Error('Unauthorized');
 

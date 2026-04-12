@@ -21,6 +21,10 @@ export interface Perfil {
   logo_url?: string;
   avatar_url?: string;
   theme?: string;
+  onboarding_completed?: boolean;
+  trial_end?: string;
+  subscription_status?: string;
+  custom_price?: number;
 }
 
 export interface Anamnese {
@@ -628,6 +632,18 @@ export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
       .from('configuracoes')
       .upsert({ user_id: user.id, nome: 'PERFIL_EXTRAS', valor: value }, { onConflict: 'user_id, nome' });
   }
+}
+
+export async function updateOnboardingStatus(completed: boolean): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+
+  const { error } = await supabase
+    .from('perfis')
+    .update({ onboarding_completed: completed })
+    .eq('id', user.id);
+  
+  if (error) throw error;
 }
 
 export async function checkSlugAvailability(slug: string): Promise<boolean> {

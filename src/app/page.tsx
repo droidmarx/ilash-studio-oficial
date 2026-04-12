@@ -15,7 +15,8 @@ import {
   setHours,
   setMinutes,
   addDays,
-  isWithinInterval
+  isWithinInterval,
+  differenceInDays
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { CalendarDay } from "@/components/agenda/CalendarDay"
@@ -57,14 +58,16 @@ import { cn } from "@/lib/utils"
 import Image from "next/image"
 
 import { SetupModal } from "@/components/auth/SetupModal"
-import { getProfile, updateProfile, Perfil } from "@/lib/api"
+import { getProfile, updateProfile, Perfil, updateOnboardingStatus, createRecipient } from "@/lib/api"
 import { useAuth } from "@/components/auth/AuthContext"
+import { OnboardingTutorial } from "@/components/onboarding/OnboardingTutorial"
 
 export default function AgendaPage() {
   const router = useRouter()
   const { user, loading: authLoading, signOut } = useAuth()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [isSetupOpen, setIsSetupOpen] = useState(false)
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
   
   const { 
     clients,
@@ -93,6 +96,13 @@ export default function AgendaPage() {
   const [isAuthorized, setIsAuthorized] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
+  const daysRemaining = useMemo(() => {
+    if (!perfil?.trial_end) return null;
+    const end = new Date(perfil.trial_end);
+    const diff = differenceInDays(end, new Date());
+    return diff > 0 ? diff : 0;
+  }, [perfil]);
+
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
@@ -113,6 +123,11 @@ export default function AgendaPage() {
             const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
             if (googleAvatar && p.avatar_url !== googleAvatar) {
               updateProfile({ avatar_url: googleAvatar });
+            }
+
+            // Check if onboarding is needed
+            if (p.onboarding_completed === false) {
+              setIsOnboardingOpen(true)
             }
           } else {
             setIsSetupOpen(true)
@@ -135,6 +150,19 @@ export default function AgendaPage() {
       }
     }
   }, [user, authLoading, router])
+
+  const handleOnboardingComplete = async (chatId: string) => {
+    try {
+      if (chatId) {
+        await createRecipient({ nome: "Principal", chatID: chatId });
+      }
+      await updateOnboardingStatus(true);
+      setIsOnboardingOpen(false);
+      setPerfil(prev => prev ? {...prev, onboarding_completed: true} : null);
+    } catch (error) {
+      console.error("Erro ao completar onboarding:", error);
+    }
+  };
 
   const toggleTheme = (newTheme: string) => {
     setTheme(newTheme)
@@ -272,6 +300,11 @@ export default function AgendaPage() {
         }} 
       />
 
+      <OnboardingTutorial 
+        isOpen={isOnboardingOpen} 
+        onComplete={handleOnboardingComplete} 
+      />
+
       <div className="w-full max-w-7xl mx-auto space-y-10">
         
         <header className="relative w-full flex flex-col md:flex-row items-center justify-between bg-card/60 backdrop-blur-3xl border border-primary/20 rounded-[3rem] p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] mb-12 animate-in slide-in-from-top-8 duration-1000">
@@ -313,6 +346,21 @@ export default function AgendaPage() {
                          ilash-studio-oficial.vercel.app/s/{perfil.slug}
                        </span>
                      </a>
+                   </div>
+                 )}
+
+                 {daysRemaining !== null && (
+                   <div className="mt-4 flex justify-center md:justify-start">
+                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-2xl border border-primary/20">
+                       <Clock size={14} className="text-primary" />
+                       <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Dias Restantes:</span>
+                       <span className={cn(
+                         "text-sm font-black",
+                         daysRemaining <= 5 ? "text-destructive animate-pulse" : "text-primary"
+                       )}>
+                         {daysRemaining} dias
+                       </span>
+                     </div>
                    </div>
                  )}
               </div>

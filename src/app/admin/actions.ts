@@ -78,16 +78,37 @@ export async function extendTrial(token: string, userId: string) {
     return true;
 }
 
-export async function banUser(token: string, userId: string) {
+    if (error) throw error;
+    return true;
+}
+
+export async function deleteUserPermanent(token: string, userId: string) {
     if (!await checkAdmin(token)) throw new Error('Unauthorized');
 
-    // Updating role to banned could be an option, or deleting.
+    // 1. Delete from profiles (perfis) - handled by RLS/Trigger maybe, but let's be explicit
+    const { error: profileError } = await supabaseAdmin
+        .from('perfis')
+        .delete()
+        .eq('id', userId);
+    
+    if (profileError) throw profileError;
+
+    // 2. Delete from auth.users (requires service_role)
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (authError) throw authError;
+
+    return true;
+}
+
+export async function updateTrialEnd(token: string, userId: string, isoDate: string) {
+    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+
     const { error } = await supabaseAdmin
         .from('perfis')
         .update({ 
-            subscription_status: 'cancelled',
-            trial_end: new Date().toISOString(), // expire trial
-            role: 'banned'
+            trial_end: isoDate,
+            subscription_status: 'trial' // reset to trial so the date is respected
         })
         .eq('id', userId);
 

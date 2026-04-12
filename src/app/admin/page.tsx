@@ -1,15 +1,22 @@
-
 "use client"
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthContext';
-import { fetchUsers, fetchPlan, updatePlanPrice, extendTrial, banUser } from './actions';
+import { 
+  fetchUsers, 
+  fetchPlan, 
+  updatePlanPrice, 
+  extendTrial, 
+  deleteUserPermanent,
+  updateTrialEnd 
+} from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShieldAlert, CheckCircle2, Clock, Ban } from 'lucide-react';
+import { Loader2, ShieldAlert, CheckCircle, Clock, Ban, Trash2, Calendar as CalendarIcon, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -30,15 +37,16 @@ export default function AdminDashboard() {
   const [adminPass, setAdminPass] = useState('');
   const [isAuthorized, setIsAuthorized] = useState(false);
 
+  // Edit State
+  const [editingDate, setEditingDate] = useState<{id: string, date: string} | null>(null);
+
   useEffect(() => {
     const savedAuth = sessionStorage.getItem('admin_auth');
     if (savedAuth === 'true') {
       setIsAuthorized(true);
-      // If we don't have a supabase session, we use the master password as token
       loadData('ilash105046');
     }
 
-    // Check if we have a supabase user, but don't redirect if missing
     import('@/lib/supabase').then(({ supabase }) => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
@@ -54,7 +62,7 @@ export default function AdminDashboard() {
       setIsAuthorized(true);
       sessionStorage.setItem('admin_auth', 'true');
       toast({ title: 'Acesso Autorizado', description: 'Bem-vindo ao painel de controle.' });
-      loadData('ilash105046'); // Fetch data after login
+      loadData('ilash105046');
     } else {
       toast({ title: 'Erro de Acesso', description: 'Usuário ou senha incorretos.', variant: 'destructive' });
     }
@@ -73,7 +81,6 @@ export default function AdminDashboard() {
       setNewPrice(planData?.price?.toString() || '');
     } catch (error) {
       console.error(error);
-      // Silently fail if just not authorized yet
       if (isAuthorized) {
         toast({ title: 'Erro de Carregamento', description: 'Não foi possível buscar os dados.', variant: 'destructive' });
       }
@@ -82,7 +89,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Helper to get current best token
   const getActiveToken = () => token || 'ilash105046';
 
   const handleUpdatePrice = async () => {
@@ -112,15 +118,29 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleBanUser = async (userId: string) => {
-    if (!confirm("Tem certeza que deseja banir este usuário?")) return;
-    setActionLoading(`ban-${userId}`);
+  const handleDeletePermanent = async (userId: string) => {
+    if(!confirm("⚠️ AVISO: Isso excluirá o usuário PERMANENTEMENTE do banco de dados e do Auth. Ele poderá se cadastrar novamente do zero. Confirmar?")) return;
+    setActionLoading(`delete-${userId}`);
     try {
-      await banUser(getActiveToken(), userId);
-      toast({ title: 'Sucesso', description: 'Usuário banido.' });
+      await deleteUserPermanent(getActiveToken(), userId);
+      toast({ title: 'Sucesso', description: 'Usuário excluído permanentemente.' });
       loadData(getActiveToken());
     } catch (error) {
-      toast({ title: 'Erro', description: 'Falha ao banir usuário.', variant: 'destructive' });
+       toast({ title: 'Erro', description: 'Falha ao excluir usuário.', variant: 'destructive' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUpdateTrialDate = async (userId: string, newDate: string) => {
+    setActionLoading(`date-${userId}`);
+    try {
+      await updateTrialEnd(getActiveToken(), userId, new Date(newDate).toISOString());
+      toast({ title: 'Sucesso', description: 'Data de vencimento atualizada.' });
+      setEditingDate(null);
+      loadData(getActiveToken());
+    } catch (error) {
+       toast({ title: 'Erro', description: 'Falha ao atualizar data.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -220,69 +240,100 @@ export default function AdminDashboard() {
         </Card>
 
         <Card className="md:col-span-2 bg-card/60 backdrop-blur-3xl border-primary/20 rounded-3xl overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-xl text-primary">Usuários Cadastrados</CardTitle>
-          </CardHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-primary/5 uppercase text-xs tracking-wider text-muted-foreground font-semibold border-b border-primary/10">
-                <tr>
-                  <th className="px-6 py-4">Usuário</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Vencimento</th>
-                  <th className="px-6 py-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-primary/10">
-                {users.map(u => (
-                  <tr key={u.id} className="hover:bg-primary/5 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-foreground">{u.nome_exibicao}</div>
-                      <div className="text-xs text-muted-foreground">{u.email}</div>
-                      {u.role === 'admin' && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase font-bold tracking-wider mt-1 inline-block">Admin</span>}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${u.subscription_status === 'authorized' ? 'bg-green-500/20 text-green-500' :
-                          u.subscription_status === 'trial' ? 'bg-amber-500/20 text-amber-500' :
-                            'bg-destructive/20 text-destructive'
-                        }`}>
-                        {u.subscription_status === 'authorized' ? <CheckCircle2 size={12} /> :
-                          u.subscription_status === 'trial' ? <Clock size={12} /> : <Ban size={12} />}
-                        {u.subscription_status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {u.trial_end ? format(new Date(u.trial_end), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '-'}
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                      {u.role !== 'admin' && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="rounded-lg border-primary/30 hover:bg-primary/10"
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-primary/10 bg-primary/5">
+                    <TableHead className="text-primary/50 text-[10px] uppercase font-black">Usuário</TableHead>
+                    <TableHead className="text-primary/50 text-[10px] uppercase font-black">Status</TableHead>
+                    <TableHead className="text-primary/50 text-[10px] uppercase font-black">Vencimento</TableHead>
+                    <TableHead className="text-right text-primary/50 text-[10px] uppercase font-black">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => (
+                    <TableRow key={u.id} className="border-primary/5 hover:bg-primary/5 transition-colors">
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-primary/90">{u.nome_exibicao || 'Usuário Sem Nome'}</span>
+                          <span className="text-[10px] text-primary/40 font-mono">{u.email}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {u.subscription_status === 'authorized' ? (
+                          <div className="flex items-center gap-2 text-green-500 bg-green-500/10 px-3 py-1 rounded-full w-fit border border-green-500/20">
+                            <CheckCircle size={12} />
+                            <span className="text-[10px] font-black uppercase">Ativo</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-primary/40 bg-primary/5 px-3 py-1 rounded-full w-fit border border-primary/10">
+                            <Clock size={12} />
+                            <span className="text-[10px] font-black uppercase">Trial</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-[10px] font-mono whitespace-nowrap">
+                        {editingDate?.id === u.id ? (
+                          <div className="flex items-center gap-2">
+                            <Input 
+                              type="date" 
+                              className="h-8 w-32 bg-background border-primary/20 p-1 text-[10px]"
+                              value={editingDate.date}
+                              onChange={(e) => setEditingDate({ ...editingDate, date: e.target.value })}
+                            />
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-green-500 hover:text-green-400"
+                              onClick={() => handleUpdateTrialDate(u.id, editingDate.date)}
+                              disabled={actionLoading === `date-${u.id}`}
+                            >
+                              <Save size={14} />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {u.trial_end ? format(new Date(u.trial_end), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 text-primary/30 hover:text-primary"
+                              onClick={() => setEditingDate({ id: u.id, date: u.trial_end?.split('T')[0] || '' })}
+                            >
+                              <CalendarIcon size={12} />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-8 px-3 rounded-xl border-primary/10 text-[10px] font-black uppercase tracking-tighter hover:bg-primary/10"
                             onClick={() => handleExtendTrial(u.id)}
                             disabled={actionLoading === `extend-${u.id}`}
                           >
-                            {actionLoading === `extend-${u.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : '+30 Dias'}
+                            {actionLoading === `extend-${u.id}` ? <Loader2 className="animate-spin" size={12} /> : '+30 Dias'}
                           </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="rounded-lg bg-destructive/80 hover:bg-destructive"
-                            onClick={() => handleBanUser(u.id)}
-                            disabled={actionLoading === `ban-${u.id}` || u.role === 'banned'}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-xl text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeletePermanent(u.id)}
+                            disabled={actionLoading === `delete-${u.id}`}
                           >
-                            {actionLoading === `ban-${u.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Banir'}
+                            {actionLoading === `delete-${u.id}` ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={16} />}
                           </Button>
-                        </>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>

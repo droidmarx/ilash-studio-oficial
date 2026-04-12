@@ -78,9 +78,6 @@ export async function extendTrial(token: string, userId: string) {
     return true;
 }
 
-    if (error) throw error;
-    return true;
-}
 
 export async function deleteUserPermanent(token: string, userId: string) {
     if (!await checkAdmin(token)) throw new Error('Unauthorized');

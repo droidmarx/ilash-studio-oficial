@@ -29,7 +29,7 @@ export async function fetchUsers(token: string) {
     const { data, error } = await supabaseAdmin
         .from('perfis')
         .select('id, email, nome_exibicao, subscription_status, trial_end, role, plan')
-        .order('created_at', { ascending: false });
+        .order('id', { ascending: false });
 
     if (error) throw error;
     return data;

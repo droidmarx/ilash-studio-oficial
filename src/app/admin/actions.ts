@@ -53,16 +53,28 @@ export async function fetchUsers(token: string) {
     try {
         if (!await checkAdmin(token)) throw new Error('Unauthorized');
 
+        // Tentativa 1: Busca Completa com todas as colunas
         const { data, error } = await getSupabaseAdmin()
             .from('perfis')
             .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed')
             .order('id', { ascending: false });
 
-        if (error) {
-            console.error('Admin Error (fetchUsers):', error);
-            throw new Error(`DB Error: ${error.message}`);
+        if (!error) return data;
+
+        console.warn('Busca completa falhou, tentando busca básica de fallback:', error.message);
+
+        // Tentativa 2: Busca de Fallback (apenas colunas fundamentais que sabemos que existem desde o início)
+        const { data: fallbackData, error: fallbackError } = await getSupabaseAdmin()
+            .from('perfis')
+            .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role')
+            .order('id', { ascending: false });
+
+        if (fallbackError) {
+            console.error('Busca de fallback também falhou:', fallbackError);
+            throw new Error(`DB Error: ${fallbackError.message}`);
         }
-        return data;
+
+        return fallbackData;
     } catch (err: any) {
         console.error('Server Action Error (fetchUsers):', err);
         throw err;
@@ -79,11 +91,14 @@ export async function fetchPlan(token: string) {
             .eq('name', 'Premium')
             .maybeSingle();
 
-        if (error) throw error;
-        return data;
+        if (error) {
+            console.warn('Erro ao buscar planos (tabela plans pode não existir ainda):', error.message);
+            return { name: 'Premium', price: 14.99 }; // Fallback estático
+        }
+        return data || { name: 'Premium', price: 14.99 };
     } catch (err: any) {
         console.error('Server Action Error (fetchPlan):', err);
-        throw err;
+        return { name: 'Premium', price: 14.99 };
     }
 }
 

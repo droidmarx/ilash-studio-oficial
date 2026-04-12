@@ -215,36 +215,46 @@ export default function AgendaPage() {
   };
 
   const gainsData = useMemo(() => {
-    const monthlyTotal = clients
-      .filter(c => c.confirmado !== false && isSameMonth(new Date(c.data), currentMonth))
-      .reduce((acc, curr) => acc + parseValue(curr.valor), 0);
-
-    const weeklyGains = [];
-    // Começa na primeira semana que contém dias do mês atual
-    let start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
-    const endOfCurrentMonth = endOfMonth(currentMonth);
-
-    while (start <= endOfCurrentMonth) {
-      const wStart = startOfWeek(start, { weekStartsOn: 0 });
-      const wEnd = endOfWeek(start, { weekStartsOn: 0 });
-      
-      const weeklyTotal = clients
+    try {
+      const monthlyTotal = clients
         .filter(c => {
-          if (c.confirmado === false) return false;
+          if (!c.data || c.confirmado === false) return false;
           const d = new Date(c.data);
-          return isWithinInterval(d, { start: wStart, end: wEnd });
+          if (isNaN(d.getTime())) return false;
+          return isSameMonth(d, currentMonth);
         })
         .reduce((acc, curr) => acc + parseValue(curr.valor), 0);
-      
-      weeklyGains.push({
-        label: `${format(wStart, 'dd/MM')} - ${format(wEnd, 'dd/MM')}`,
-        total: weeklyTotal
-      });
-      
-      start = addDays(wEnd, 1);
-    }
 
-    return { monthlyTotal, weeklyGains };
+      const weeklyGains = [];
+      let start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
+      const endOfCurrentMonth = endOfMonth(currentMonth);
+
+      while (start <= endOfCurrentMonth) {
+        const wStart = startOfWeek(start, { weekStartsOn: 0 });
+        const wEnd = endOfWeek(start, { weekStartsOn: 0 });
+        
+        const weeklyTotal = clients
+          .filter(c => {
+            if (!c.data || c.confirmado === false) return false;
+            const d = new Date(c.data);
+            if (isNaN(d.getTime())) return false;
+            return isWithinInterval(d, { start: wStart, end: wEnd });
+          })
+          .reduce((acc, curr) => acc + parseValue(curr.valor), 0);
+        
+        weeklyGains.push({
+          label: `${format(wStart, 'dd/MM')} - ${format(wEnd, 'dd/MM')}`,
+          total: weeklyTotal
+        });
+        
+        start = addDays(wEnd, 1);
+      }
+
+      return { monthlyTotal, weeklyGains };
+    } catch (err) {
+      console.error("Erro no cálculo de ganhos:", err);
+      return { monthlyTotal: 0, weeklyGains: [] };
+    }
   }, [clients, currentMonth]);
 
   const handleDayClick = (day: Date, events: Client[], birthdays: Client[]) => {
@@ -272,7 +282,13 @@ export default function AgendaPage() {
 
   const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
-  if (!isAuthorized) return null
+  if (!hasMounted || !isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="animate-spin text-primary" size={48} />
+      </div>
+    )
+  }
 
   if (showSplash) {
     return (

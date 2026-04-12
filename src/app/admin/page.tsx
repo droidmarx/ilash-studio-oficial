@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from 'react';
@@ -16,11 +17,11 @@ export default function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  
+
   const [users, setUsers] = useState<any[]>([]);
   const [plan, setPlan] = useState<any>(null);
   const [newPrice, setNewPrice] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [token, setToken] = useState('');
 
@@ -36,11 +37,11 @@ export default function AdminDashboard() {
       // If we don't have a supabase session, we use the master password as token
       loadData('ilash105046');
     }
-    
+
     // Check if we have a supabase user, but don't redirect if missing
     import('@/lib/supabase').then(({ supabase }) => {
       supabase.auth.getSession().then(({ data: { session } }) => {
-        if(session) {
+        if (session) {
           setToken(session.access_token);
         }
       });
@@ -53,6 +54,7 @@ export default function AdminDashboard() {
       setIsAuthorized(true);
       sessionStorage.setItem('admin_auth', 'true');
       toast({ title: 'Acesso Autorizado', description: 'Bem-vindo ao painel de controle.' });
+      loadData('ilash105046'); // Fetch data after login
     } else {
       toast({ title: 'Erro de Acesso', description: 'Usuário ou senha incorretos.', variant: 'destructive' });
     }
@@ -63,8 +65,8 @@ export default function AdminDashboard() {
       setLoading(true);
       const activeToken = accessToken || getActiveToken();
       const [usersData, planData] = await Promise.all([
-         fetchUsers(activeToken),
-         fetchPlan(activeToken)
+        fetchUsers(activeToken),
+        fetchPlan(activeToken)
       ]);
       setUsers(usersData);
       setPlan(planData);
@@ -91,7 +93,7 @@ export default function AdminDashboard() {
       toast({ title: 'Sucesso', description: 'Preço atualizado com sucesso.' });
       loadData(getActiveToken());
     } catch (error) {
-       toast({ title: 'Erro', description: 'Falha ao atualizar preço.', variant: 'destructive' });
+      toast({ title: 'Erro', description: 'Falha ao atualizar preço.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -104,21 +106,21 @@ export default function AdminDashboard() {
       toast({ title: 'Sucesso', description: 'Mais 30 dias concedidos.' });
       loadData(getActiveToken());
     } catch (error) {
-       toast({ title: 'Erro', description: 'Falha ao estender trial.', variant: 'destructive' });
+      toast({ title: 'Erro', description: 'Falha ao estender trial.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleBanUser = async (userId: string) => {
-    if(!confirm("Tem certeza que deseja banir este usuário?")) return;
+    if (!confirm("Tem certeza que deseja banir este usuário?")) return;
     setActionLoading(`ban-${userId}`);
     try {
       await banUser(getActiveToken(), userId);
       toast({ title: 'Sucesso', description: 'Usuário banido.' });
       loadData(getActiveToken());
     } catch (error) {
-       toast({ title: 'Erro', description: 'Falha ao banir usuário.', variant: 'destructive' });
+      toast({ title: 'Erro', description: 'Falha ao banir usuário.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -147,7 +149,7 @@ export default function AdminDashboard() {
             <form onSubmit={handleAdminLogin} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-primary/60">Usuário</label>
-                <Input 
+                <Input
                   value={adminUser}
                   onChange={e => setAdminUser(e.target.value)}
                   className="bg-background/50 border-primary/10 h-12 rounded-xl focus:border-primary/40 focus:ring-0"
@@ -156,7 +158,7 @@ export default function AdminDashboard() {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-primary/60">Senha</label>
-                <Input 
+                <Input
                   type="password"
                   value={adminPass}
                   onChange={e => setAdminPass(e.target.value)}
@@ -193,15 +195,15 @@ export default function AdminDashboard() {
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Preço Mensal (R$)</label>
               <div className="flex gap-2">
-                <Input 
-                  type="number" 
-                  step="0.01" 
-                  value={newPrice} 
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={newPrice}
                   onChange={e => setNewPrice(e.target.value)}
                   className="bg-background border-primary/20 rounded-xl"
                 />
-                <Button 
-                  onClick={handleUpdatePrice} 
+                <Button
+                  onClick={handleUpdatePrice}
                   disabled={actionLoading === 'price'}
                   className="bg-primary hover:bg-primary/80 text-primary-foreground rounded-xl"
                 >
@@ -209,10 +211,10 @@ export default function AdminDashboard() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="pt-4 border-t border-primary/10 text-sm space-y-2 text-muted-foreground">
-               <p><strong>Plano Ativo:</strong> {plan?.name}</p>
-               <p><strong>Total Usuários:</strong> {users.length}</p>
+              <p><strong>Plano Ativo:</strong> {plan?.name}</p>
+              <p><strong>Total Usuários:</strong> {users.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -240,24 +242,23 @@ export default function AdminDashboard() {
                       {u.role === 'admin' && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase font-bold tracking-wider mt-1 inline-block">Admin</span>}
                     </td>
                     <td className="px-6 py-4">
-                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          u.subscription_status === 'authorized' ? 'bg-green-500/20 text-green-500' :
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${u.subscription_status === 'authorized' ? 'bg-green-500/20 text-green-500' :
                           u.subscription_status === 'trial' ? 'bg-amber-500/20 text-amber-500' :
-                          'bg-destructive/20 text-destructive'
-                       }`}>
-                          {u.subscription_status === 'authorized' ? <CheckCircle2 size={12}/> : 
-                           u.subscription_status === 'trial' ? <Clock size={12}/> : <Ban size={12}/>}
-                          {u.subscription_status}
-                       </span>
+                            'bg-destructive/20 text-destructive'
+                        }`}>
+                        {u.subscription_status === 'authorized' ? <CheckCircle2 size={12} /> :
+                          u.subscription_status === 'trial' ? <Clock size={12} /> : <Ban size={12} />}
+                        {u.subscription_status}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">
-                       {u.trial_end ? format(new Date(u.trial_end), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '-'}
+                      {u.trial_end ? format(new Date(u.trial_end), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '-'}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       {u.role !== 'admin' && (
                         <>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             className="rounded-lg border-primary/30 hover:bg-primary/10"
                             onClick={() => handleExtendTrial(u.id)}
@@ -265,8 +266,8 @@ export default function AdminDashboard() {
                           >
                             {actionLoading === `extend-${u.id}` ? <Loader2 className="w-4 h-4 animate-spin" /> : '+30 Dias'}
                           </Button>
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             size="sm"
                             className="rounded-lg bg-destructive/80 hover:bg-destructive"
                             onClick={() => handleBanUser(u.id)}

@@ -50,7 +50,8 @@ import {
   Menu as MenuIcon,
   X as CloseIcon,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  Clock
 } from "lucide-react"
 import { Client } from "@/lib/api"
 import { Toaster } from "@/components/ui/toaster"

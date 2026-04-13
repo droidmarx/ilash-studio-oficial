@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
     const { data: profile, error } = await supabaseAdmin
       .from('perfis')
-      .select('subscription_status, trial_end, role, plan')
+      .select('subscription_status, trial_end, role, plan, custom_price')
       .eq('id', user.id)
       .single();
 
@@ -49,7 +49,8 @@ export async function GET(request: Request) {
       trial_end: profile.trial_end,
       has_access: hasAccess,
       role: profile.role,
-      plan: profile.plan
+      plan: profile.plan,
+      custom_price: profile.custom_price ?? null
     });
   } catch (error: any) {
     console.error('Subscription Status Error:', error);

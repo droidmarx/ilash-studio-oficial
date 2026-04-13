@@ -160,20 +160,38 @@ export async function extendTrial(token: string, userId: string) {
 
 export async function deleteUserPermanent(token: string, userId: string) {
     try {
-        if (!await checkAdmin(token)) throw new Error('Unauthorized');
+        if (!await checkAdmin(token)) throw new Error('Não autorizado');
 
+        console.log(`[Admin] Iniciando exclusão robusta do usuário: ${userId}`);
         const admin = getSupabaseAdmin();
-        const { error: profileError } = await admin
-            .from('perfis')
-            .delete()
-            .eq('id', userId);
         
-        if (profileError) throw new Error(`Erro Perfil: ${profileError.message}`);
+        // 1. Executar a exclusão de todas as dependências no PostgreSQL via RPC
+        // Esta função garante a ordem correta: payment_logs -> subscriptions -> agendamentos -> configuracoes -> perfis
+        const { data: rpcData, error: rpcError } = await admin.rpc('delete_user_data', {
+            target_user_id: userId
+        });
 
-        // Acesso ao admin auth requer cuidado extra com o tipo no Supabase v2
+        if (rpcError) {
+            console.error('[Admin] Erro ao executar RPC delete_user_data:', rpcError);
+            throw new Error(`Erro crítico no banco de dados: ${rpcError.message}`);
+        }
+
+        if (rpcData && rpcData.success === false) {
+             console.error('[Admin] SQL retornou falha:', rpcData);
+             throw new Error(`Falha na exclusão SQL: ${rpcData.message}`);
+        }
+
+        // 2. Excluir o usuário do Supabase Auth
+        // Nota: admin.auth.admin.deleteUser requer Service Role Key
         const { error: authError } = await (admin.auth as any).admin.deleteUser(userId);
-        if (authError) throw new Error(`Erro Auth: ${authError.message}`);
+        
+        if (authError) {
+            console.error('[Admin] Erro ao remover usuário do Auth:', authError);
+            // Se o DB já foi limpo, o erro no Auth é menos crítico mas precisa ser reportado
+            throw new Error(`Dados limpos, mas erro ao remover do Auth: ${authError.message}`);
+        }
 
+        console.log(`[Admin] Usuário ${userId} excluído permanentemente com sucesso.`);
         return true;
     } catch (err: any) {
         console.error('Server Action Crash (deleteUserPermanent):', err);

@@ -17,6 +17,7 @@ interface SubscriptionStatus {
   has_access: boolean;
   role: string;
   plan: string;
+  custom_price: number | null;
 }
 
 export default function SubscriptionPage() {
@@ -121,6 +122,10 @@ export default function SubscriptionPage() {
   const isAuthorized = status?.status === 'authorized';
   const isAdmin = status?.role === 'admin';
   const hasAccess = status?.has_access;
+  // Preço: custom_price do admin > 9.99 padrão
+  const displayPrice = status?.custom_price && status.custom_price > 0
+    ? Number(status.custom_price).toFixed(2).replace('.', ',')
+    : '9,99';
   
   let trialDaysLeft = 0;
   if (isTrial && status?.trial_end) {
@@ -205,7 +210,7 @@ export default function SubscriptionPage() {
               <div className="space-y-2">
                 <h3 className="text-lg font-bold text-primary/60 tracking-widest uppercase">Plano I Lash Studio</h3>
                 <div className="flex items-baseline gap-2">
-                   <span className="text-6xl font-headline text-gold-gradient text-transparent bg-clip-text">14,99</span>
+                   <span className="text-6xl font-headline text-gold-gradient text-transparent bg-clip-text">{displayPrice}</span>
                    <span className="text-xl font-bold text-muted-foreground">/mês</span>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 "use client"
+import { useAuth } from "@/hooks/use-auth"
 
 import { useState, useEffect } from "react"
 import { Settings, Send, MessageSquare, User, Trash2, PlusCircle, Loader2, Key, Bot, XCircle, Sparkles, Clock, Palmtree, RefreshCw, Calendar, Bell, ShieldCheck, Crown, Check, MessageCircle, Type } from "lucide-react"

@@ -144,8 +144,8 @@ export default function AgendaPage() {
               updateProfile({ avatar_url: googleAvatar });
             }
 
-            // Check if onboarding is needed (Step 12: Relaxed check for null/false)
-            if (p.onboarding_completed !== true) {
+            // Check if onboarding is needed (Explicit check for false or undefined)
+            if (p.onboarding_completed === false || p.onboarding_completed === null || p.onboarding_completed === undefined) {
               setIsOnboardingOpen(true)
             }
           } else {

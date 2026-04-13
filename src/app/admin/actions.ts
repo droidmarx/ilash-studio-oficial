@@ -33,19 +33,20 @@ export async function updateUserProfile(token: string, userId: string, data: any
     try {
         if (!await checkAdmin(token)) throw new Error('Unauthorized');
 
-        const { error } = await getSupabaseAdmin()
+        const admin = getSupabaseAdmin();
+        const { error } = await admin
             .from('perfis')
             .update(data)
             .eq('id', userId);
 
         if (error) {
-            console.error('Admin Error (updateUserProfile):', error);
-            throw new Error(`DB Error: ${error.message} (${error.code})`);
+            console.error('Admin DB Update Error:', error);
+            throw new Error(`Erro no Banco: ${error.message}`);
         }
         return true;
     } catch (err: any) {
-        console.error('Server Action Error (updateUserProfile):', err);
-        throw err;
+        console.error('Server Action Crash (updateUserProfile):', err);
+        throw new Error(err.message || 'Falha interna ao atualizar perfil');
     }
 }
 
@@ -147,20 +148,22 @@ export async function deleteUserPermanent(token: string, userId: string) {
     try {
         if (!await checkAdmin(token)) throw new Error('Unauthorized');
 
-        const { error: profileError } = await getSupabaseAdmin()
+        const admin = getSupabaseAdmin();
+        const { error: profileError } = await admin
             .from('perfis')
             .delete()
             .eq('id', userId);
         
-        if (profileError) throw profileError;
+        if (profileError) throw new Error(`Erro Perfil: ${profileError.message}`);
 
-        const { error: authError } = await (getSupabaseAdmin() as any).auth.admin.deleteUser(userId);
-        if (authError) throw authError;
+        // Acesso ao admin auth requer cuidado extra com o tipo no Supabase v2
+        const { error: authError } = await (admin.auth as any).admin.deleteUser(userId);
+        if (authError) throw new Error(`Erro Auth: ${authError.message}`);
 
         return true;
     } catch (err: any) {
-        console.error('Server Action Error (deleteUserPermanent):', err);
-        throw err;
+        console.error('Server Action Crash (deleteUserPermanent):', err);
+        throw new Error(err.message || 'Falha interna ao deletar usuário');
     }
 }
 

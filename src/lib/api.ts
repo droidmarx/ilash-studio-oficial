@@ -635,15 +635,23 @@ export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
 }
 
 export async function updateOnboardingStatus(completed: boolean): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Usuário não autenticado");
 
-  const { error } = await supabase
-    .from('perfis')
-    .update({ onboarding_completed: completed })
-    .eq('id', user.id);
-  
-  if (error) throw error;
+    const { error } = await supabase
+      .from('perfis')
+      .update({ onboarding_completed: completed })
+      .eq('id', user.id);
+    
+    if (error) {
+      console.error("Erro RLS/DB ao atualizar onboarding:", error.message);
+      throw error;
+    }
+  } catch (error: any) {
+    console.error("Falha na chamada de updateOnboardingStatus:", error);
+    throw error;
+  }
 }
 
 export async function checkSlugAvailability(slug: string): Promise<boolean> {

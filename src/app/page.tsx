@@ -65,7 +65,8 @@ import { OnboardingTutorial } from "@/components/onboarding/OnboardingTutorial"
 
 export default function AgendaPage() {
   const router = useRouter()
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, loading: authLoading, signOut, impersonatedUser } = useAuth()
+  const effectiveUserId = impersonatedUser?.id || user?.id;
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [isSetupOpen, setIsSetupOpen] = useState(false)
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
@@ -129,7 +130,7 @@ export default function AgendaPage() {
       } else {
         setIsAuthorized(true)
         
-        getProfile().then(p => {
+        getProfile(effectiveUserId).then(p => {
           if (p) {
             setPerfil(p)
             

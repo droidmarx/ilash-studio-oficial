@@ -7,7 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
 export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, impersonatedUser } = useAuth();
+  const effectiveUserId = impersonatedUser?.id || user?.id;
   const router = useRouter();
   const pathname = usePathname();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
@@ -41,7 +42,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
       const { data: profile } = await supabase
         .from('perfis')
         .select('subscription_status, trial_end, role')
-        .eq('id', user.id)
+        .eq('id', effectiveUserId)
         .single();
         
       if (!profile) {

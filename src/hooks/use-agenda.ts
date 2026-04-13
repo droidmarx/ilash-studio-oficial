@@ -8,7 +8,8 @@ import { useAuth } from '@/components/auth/AuthContext';
 import { parseBirthday } from '@/lib/utils';
 
 export function useAgenda() {
-  const { user } = useAuth();
+  const { user, impersonatedUser } = useAuth();
+  const effectiveUserId = impersonatedUser?.id || user?.id;
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -17,7 +18,7 @@ export function useAgenda() {
   const fetchClients = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const data = await getClients();
+      const data = await getClients(effectiveUserId);
       setClients(data);
     } catch (error) {
       toast({
@@ -28,7 +29,7 @@ export function useAgenda() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, effectiveUserId]);
 
   useEffect(() => {
     fetchClients();
@@ -85,9 +86,9 @@ export function useAgenda() {
   const addAppointment = async (data: Omit<Client, 'id'>) => {
     setLoading(true);
     try {
-      const newClient = await createClient(data);
+      const newClient = await createClient(data, effectiveUserId);
       toast({ title: "Sucesso", description: "Agendamento criado!" });
-      await sendTelegramNotification({ tipo: 'Novo', cliente: newClient, userId: user?.id });
+      await sendTelegramNotification({ tipo: 'Novo', cliente: newClient, userId: effectiveUserId });
       await fetchClients(false);
     } catch (error) {
       toast({ variant: "destructive", title: "Erro", description: "Falha ao criar agendamento." });

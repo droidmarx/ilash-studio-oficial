@@ -237,13 +237,17 @@ export async function getWorkingHours(userId?: string): Promise<WorkingHours> {
   }
 }
 
-export async function updateWorkingHours(hours: WorkingHours): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+export async function updateWorkingHours(hours: WorkingHours, userId?: string): Promise<void> {
+  let targetId = userId;
+  if (!targetId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    targetId = user.id;
+  }
   const value = JSON.stringify(hours);
   await supabase
     .from('configuracoes')
-    .upsert({ user_id: user.id, nome: 'WORKING_HOURS', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: targetId, nome: 'WORKING_HOURS', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getVacationMode(userId?: string): Promise<VacationMode> {
@@ -266,13 +270,17 @@ export async function getVacationMode(userId?: string): Promise<VacationMode> {
   }
 }
 
-export async function updateVacationMode(mode: VacationMode): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+export async function updateVacationMode(mode: VacationMode, userId?: string): Promise<void> {
+  let targetId = userId;
+  if (!targetId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    targetId = user.id;
+  }
   const value = JSON.stringify(mode);
   await supabase
     .from('configuracoes')
-    .upsert({ user_id: user.id, nome: 'VACATION_MODE', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: targetId, nome: 'VACATION_MODE', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getTelegramConfig(userId?: string): Promise<TelegramSettings> {
@@ -295,13 +303,17 @@ export async function getTelegramConfig(userId?: string): Promise<TelegramSettin
   }
 }
 
-export async function updateTelegramConfig(settings: TelegramSettings): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+export async function updateTelegramConfig(settings: TelegramSettings, userId?: string): Promise<void> {
+  let targetId = userId;
+  if (!targetId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    targetId = user.id;
+  }
   const value = JSON.stringify(settings);
   await supabase
     .from('configuracoes')
-    .upsert({ user_id: user.id, nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: targetId, nome: 'TELEGRAM_CONFIG', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getCustomMessages(userId?: string): Promise<CustomMessages> {
@@ -324,13 +336,17 @@ export async function getCustomMessages(userId?: string): Promise<CustomMessages
   }
 }
 
-export async function updateCustomMessages(messages: CustomMessages): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+export async function updateCustomMessages(messages: CustomMessages, userId?: string): Promise<void> {
+  let targetId = userId;
+  if (!targetId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    targetId = user.id;
+  }
   const value = JSON.stringify(messages);
   await supabase
     .from('configuracoes')
-    .upsert({ user_id: user.id, nome: 'CUSTOM_MESSAGES', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: targetId, nome: 'CUSTOM_MESSAGES', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function getTechniques(userId?: string): Promise<string[]> {
@@ -353,13 +369,17 @@ export async function getTechniques(userId?: string): Promise<string[]> {
   }
 }
 
-export async function updateTechniques(techniques: string[]): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+export async function updateTechniques(techniques: string[], userId?: string): Promise<void> {
+  let targetId = userId;
+  if (!targetId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    targetId = user.id;
+  }
   const value = JSON.stringify(techniques);
   await supabase
     .from('configuracoes')
-    .upsert({ user_id: user.id, nome: 'TECHNIQUES', valor: value }, { onConflict: 'user_id, nome' });
+    .upsert({ user_id: targetId, nome: 'TECHNIQUES', valor: value }, { onConflict: 'user_id, nome' });
 }
 
 export async function updateRecipient(recipient: Recipient): Promise<void> {
@@ -488,14 +508,18 @@ export async function deleteClient(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function getProfile(): Promise<Perfil | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+export async function getProfile(userId?: string): Promise<Perfil | null> {
+  let targetId = userId;
+  if (!targetId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    targetId = user.id;
+  }
 
   const { data, error } = await supabase
     .from('perfis')
     .select('*')
-    .eq('id', user.id)
+    .eq('id', targetId)
     .maybeSingle();
   
   if (error) {
@@ -506,8 +530,8 @@ export async function getProfile(): Promise<Perfil | null> {
   // Se não existir, criar um perfil básico para o usuário
   if (!data) {
     const newProfile = {
-      id: user.id,
-      slug: `studio-${user.id.substring(0, 5)}`,
+      id: targetId,
+      slug: `studio-${targetId.substring(0, 5)}`,
       nome_exibicao: "Meu Novo Studio",
       logo_url: "",
       avatar_url: ""
@@ -529,7 +553,7 @@ export async function getProfile(): Promise<Perfil | null> {
   const { data: extras } = await supabase
     .from('configuracoes')
     .select('valor')
-    .eq('user_id', user.id)
+    .eq('user_id', targetId)
     .eq('nome', 'PERFIL_EXTRAS')
     .maybeSingle();
     
@@ -583,9 +607,13 @@ export async function createProfile(perfil: Omit<Perfil, 'id'>): Promise<Perfil>
   return data;
 }
 
-export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado");
+export async function updateProfile(perfil: Partial<Perfil>, userId?: string): Promise<void> {
+  let targetId = userId;
+  if (!targetId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Usuário não autenticado");
+    targetId = user.id;
+  }
 
   // Removemos extras para não falhar no update do DB
   const { id, theme, avatar_url, logo_url, ...updateData } = perfil as any;
@@ -595,7 +623,7 @@ export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
     const { error } = await supabase
       .from('perfis')
       .update(updateData)
-      .eq('id', user.id);
+      .eq('id', targetId);
     
     if (error) {
       console.error("Erro ao atualizar perfil:", error);
@@ -609,7 +637,7 @@ export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
   const { data: currentExtras } = await supabase
     .from('configuracoes')
     .select('valor')
-    .eq('user_id', user.id)
+    .eq('user_id', targetId)
     .eq('nome', 'PERFIL_EXTRAS')
     .maybeSingle();
     
@@ -630,7 +658,7 @@ export async function updateProfile(perfil: Partial<Perfil>): Promise<void> {
     const value = JSON.stringify(newExtras);
     await supabase
       .from('configuracoes')
-      .upsert({ user_id: user.id, nome: 'PERFIL_EXTRAS', valor: value }, { onConflict: 'user_id, nome' });
+      .upsert({ user_id: targetId, nome: 'PERFIL_EXTRAS', valor: value }, { onConflict: 'user_id, nome' });
   }
 }
 

@@ -82,6 +82,8 @@ export function SettingsModal({
   theme,
   toggleTheme
 }: SettingsModalProps) {
+  const { user, impersonatedUser } = useAuth()
+  const effectiveUserId = impersonatedUser?.id || user?.id;
   const [activeTab, setActiveTab] = useState("studio")
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [loading, setLoading] = useState(false)
@@ -107,7 +109,7 @@ export function SettingsModal({
   const loadRecipients = async () => {
     setLoading(true)
     try {
-      const data = await getRecipients()
+      const data = await getRecipients(effectiveUserId)
       const persons = data.filter(r => 
         !['SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 'WORKING_HOURS', 'VACATION_MODE', 'TELEGRAM_CONFIG', 'TECHNIQUES', 'PERFIL', 'PERFIL_EXTRAS', 'CUSTOM_MESSAGES'].includes(r.nome)
       )
@@ -117,22 +119,22 @@ export function SettingsModal({
       // const token = await getTelegramToken()
       // if (token) setBotToken(token)
 
-      const wh = await getWorkingHours()
+      const wh = await getWorkingHours(effectiveUserId)
       setWorkingHours(wh)
       
-      const vm = await getVacationMode()
+      const vm = await getVacationMode(effectiveUserId)
       setVacationMode(vm)
       
-      const tc = await getTelegramConfig()
+      const tc = await getTelegramConfig(effectiveUserId)
       setTelegramConfig(tc)
 
-      const tks = await getTechniques()
+      const tks = await getTechniques(effectiveUserId)
       setTechniques(tks)
 
-      const msgs = await getCustomMessages()
+      const msgs = await getCustomMessages(effectiveUserId)
       setCustomMessages(msgs)
 
-      const p = await getProfile()
+      const p = await getProfile(effectiveUserId)
       if (p) setPerfil(p as Perfil)
 
       
@@ -231,13 +233,13 @@ export function SettingsModal({
   const handleSave = async () => {
     setSaving(true)
     try {
-      await updateWorkingHours(workingHours);
-      await updateVacationMode(vacationMode);
-      await updateTelegramConfig(telegramConfig);
-      await updateTechniques(techniques);
-      await updateCustomMessages(customMessages);
+      await updateWorkingHours(workingHours, effectiveUserId);
+      await updateVacationMode(vacationMode, effectiveUserId);
+      await updateTelegramConfig(telegramConfig, effectiveUserId);
+      await updateTechniques(techniques, effectiveUserId);
+      await updateCustomMessages(customMessages, effectiveUserId);
 
-      const remoteRecipients = await getRecipients()
+      const remoteRecipients = await getRecipients(effectiveUserId)
       for (const remote of remoteRecipients) {
         const isSystemKey = [
           'SYSTEM_TOKEN', 'SUMMARY_STATE', 'MAIN_API_URL', 'WEBHOOK_STATE', 
@@ -249,7 +251,7 @@ export function SettingsModal({
       }
       for (const local of recipients) {
         if (local.id.startsWith('temp-')) {
-          await createRecipient({ nome: local.nome, chatID: local.chatID })
+          await createRecipient({ nome: local.nome, chatID: local.chatID }, effectiveUserId)
         } else {
           await updateRecipient(local)
         }
@@ -257,7 +259,7 @@ export function SettingsModal({
 
       const p = perfil as Perfil;
       if (p.nome_exibicao || p.slug || theme) {
-        await updateProfile({ ...p, theme });
+        await updateProfile({ ...p, theme }, effectiveUserId);
       }
 
 

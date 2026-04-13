@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { mpClient } from '@/lib/mercadopago';
+import { mpClient, payment } from '@/lib/mercadopago';
 
-// Fetch details specifically for a preapproval
+// Fetch details specifically for a preapproval (existing flow)
 async function getPreapprovalDetails(id: string) {
   const response = await fetch(`https://api.mercadopago.com/preapproval/${id}`, {
     headers: {
@@ -45,34 +45,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'ok', message: 'Already processed' });
     }
 
-    // Default subscription ID mapping if any
     let subscription_id = null;
 
     // 2. API Verification
-    // Mercado Pago Preapproval events are typically 'subscription_preapproval' or simply webhooks hitting endpoints.
-    // If it's a payment related to a subscription, we might want to check the payment details, but 
-    // to keep the subscription state updated, we must monitor the preapproval object.
-    
+    console.log(`[Webhook] Processing event: ${eventType} | ID: ${dataObjId}`);
+
     if (eventType === 'subscription_preapproval' || eventType === 'created' || eventType === 'updated') {
-      // Fetch directly from API
+      //Existing Logic for Recurring Subscriptions (Credit Card)
       let preapproval;
       try {
         preapproval = await getPreapprovalDetails(dataObjId);
       } catch (err) {
-        console.error('Failed to verify event with MP API:', err);
+        console.error('Failed to verify preapproval event with MP API:', err);
         return NextResponse.json({ error: 'Verification failed' }, { status: 400 });
       }
 
       if (preapproval) {
         const mpSubscriptionId = preapproval.id;
-        const status = preapproval.status; // authorized, pending, cancelled, paused
-        const userId = preapproval.external_reference; // This was stored during create
+        const status = preapproval.status; // authorized, pending, cancelled
+        const userId = preapproval.external_reference; 
         
-        let dbSubId = null;
-
         if (userId) {
-          // Upsert into subscriptions table
-          const { data: sub, error: subError } = await supabaseAdmin
+          const { data: sub } = await supabaseAdmin
             .from('subscriptions')
             .upsert({
               user_id: userId,
@@ -83,9 +77,8 @@ export async function POST(request: Request) {
             .select('id')
             .single();
           
-          if (sub) dbSubId = sub.id;
+          if (sub) subscription_id = sub.id;
 
-          // Update profile status
           await supabaseAdmin
             .from('perfis')
             .update({ 
@@ -94,7 +87,48 @@ export async function POST(request: Request) {
             })
             .eq('id', userId);
         }
-        subscription_id = dbSubId;
+      }
+    } 
+    else if (eventType === 'payment' || eventType === 'payment.updated') {
+      // NEW: Logic for PIX or One-off payments
+      try {
+        const paymentObj = await payment.get({ id: dataObjId });
+        
+        if (paymentObj && (paymentObj.status === 'approved' || paymentObj.status === 'authorized')) {
+          const userId = paymentObj.external_reference;
+          const mpPaymentId = paymentObj.id?.toString();
+          
+          if (userId && mpPaymentId) {
+            console.log(`[Webhook] PIX Payment Approved for user ${userId}`);
+            
+            // Upsert into subscriptions table
+            const { data: sub } = await supabaseAdmin
+              .from('subscriptions')
+              .upsert({
+                user_id: userId,
+                mercadopago_id: mpPaymentId,
+                status: 'authorized', // treat one-off approved as authorized subscription
+                updated_at: new Date().toISOString()
+              }, { onConflict: 'mercadopago_id' })
+              .select('id')
+              .single();
+
+            if (sub) subscription_id = sub.id;
+
+            // Update profile status
+            await supabaseAdmin
+              .from('perfis')
+              .update({ 
+                subscription_status: 'authorized',
+                mercadopago_subscription_id: mpPaymentId,
+                plan: paymentObj.description?.includes('Premium') ? 'Premium' : 'Standard'
+              })
+              .eq('id', userId);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to verify payment event with MP API:', err);
+        return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 });
       }
     }
 

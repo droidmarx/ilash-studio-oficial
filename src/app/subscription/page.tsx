@@ -6,7 +6,7 @@ import { useAuth } from '@/components/auth/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Crown, CheckCircle2, ShieldCheck, Zap, LogOut } from 'lucide-react';
+import { Loader2, Crown, CheckCircle2, ShieldCheck, Zap, LogOut, QrCode, Copy, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -27,6 +27,9 @@ export default function SubscriptionPage() {
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'pix'>('card');
+  const [pixData, setPixData] = useState<{ qr_code: string, qr_code_base64: string, payment_id: string } | null>(null);
+  const [isPaid, setIsPaid] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -66,44 +69,90 @@ export default function SubscriptionPage() {
   }, [user, authLoading, router, toast]);
 
   const handleUpgrade = async () => {
-    console.log('[Frontend] handleUpgrade triggered');
     setCheckoutLoading(true);
     try {
-      console.log('[Frontend] Getting session...');
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        console.warn('[Frontend] No session found');
         throw new Error('Você precisa estar logado para assinar.');
       }
 
-      console.log('[Frontend] Sending request to /api/subscription/create');
-      const response = await fetch('/api/subscription/create', {
-        method: 'POST',
-        headers: {
-           'Authorization': `Bearer ${session.access_token}`
+      if (paymentMethod === 'card') {
+        // Fluxo existente para Cartão (Assinatura Recorrente)
+        const response = await fetch('/api/subscription/create', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+        const data = await response.json();
+        if (data.init_point) {
+          window.location.href = data.init_point;
+        } else {
+          throw new Error(data.error || 'Erro ao gerar checkout de cartão');
         }
-      });
-      
-      const data = await response.json();
-      console.log('[Frontend] API Response:', data);
-      if (data.init_point) {
-        window.location.href = data.init_point;
       } else {
-        throw new Error(data.error || 'Failed to create checkout');
+        // Fluxo novo para PIX (Pagamento Único)
+        const response = await fetch('/api/mercadopago/payment/create', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+        const data = await response.json();
+        if (data.qr_code) {
+          setPixData(data);
+          toast({ title: 'PIX Gerado', description: 'Escaneie o QR Code para pagar.' });
+        } else {
+          throw new Error(data.error || 'Erro ao gerar PIX');
+        }
       }
     } catch (error: any) {
       console.error('[Frontend] Upgrade Error:', error);
       toast({ 
-        title: 'Erro de Pagamento', 
-        description: error.message || 'Ocorreu um erro ao gerar o checkout.', 
+        title: 'Erro no Pagamento', 
+        description: error.message || 'Falha na comunicação com o servidor.', 
         variant: 'destructive' 
       });
     } finally {
-      console.log('[Frontend] handleUpgrade finished');
       setCheckoutLoading(false);
     }
   };
+
+  // Polling para verificar se o PIX foi pago
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    const checkStatus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const response = await fetch('/api/subscription/status', {
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+        const data = await response.json();
+        
+        if (data.status === 'authorized' || data.status === 'active') {
+          setIsPaid(true);
+          setPixData(null);
+          toast({ title: 'Pagamento Confirmado!', description: 'Sua assinatura foi ativada.', variant: 'default' });
+          // O status global vai atualizar e remover o botão de assinar
+          const updatedResponse = await fetch('/api/subscription/status', {
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+          });
+          const updatedData = await updatedResponse.json();
+          setStatus(updatedData);
+        }
+      } catch (err) {
+        console.error('Erro no polling do PIX:', err);
+      }
+    };
+
+    if (pixData && !isPaid) {
+      interval = setInterval(checkStatus, 5000); // Check every 5 seconds
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [pixData, isPaid, toast]);
 
   const handleLogout = async () => {
     await signOut();
@@ -229,14 +278,75 @@ export default function SubscriptionPage() {
                 ))}
               </ul>
 
-              {(!isAdmin && !isAuthorized) && (
-                <Button 
-                  className="w-full h-16 rounded-full bg-gold-gradient text-primary-foreground font-black tracking-widest shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:scale-105 transition-transform text-lg mt-4"
-                  onClick={handleUpgrade}
-                  disabled={checkoutLoading}
-                >
-                  {checkoutLoading ? <Loader2 className="animate-spin" /> : "ASSINAR AGORA"}
-                </Button>
+              {(!isAdmin && !isAuthorized) && !pixData && (
+                <div className="space-y-6 mt-4">
+                  {/* Seletor de Método de Pagamento */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => setPaymentMethod('card')}
+                      className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${paymentMethod === 'card' ? 'border-primary bg-primary/10' : 'border-primary/10 hover:border-primary/30'}`}
+                    >
+                      <CreditCard className={`mb-2 ${paymentMethod === 'card' ? 'text-primary' : 'text-primary/40'}`} />
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${paymentMethod === 'card' ? 'text-primary' : 'text-primary/40'}`}>Cartão</span>
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('pix')}
+                      className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all ${paymentMethod === 'pix' ? 'border-primary bg-primary/10' : 'border-primary/10 hover:border-primary/30'}`}
+                    >
+                      <QrCode className={`mb-2 ${paymentMethod === 'pix' ? 'text-primary' : 'text-primary/40'}`} />
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${paymentMethod === 'pix' ? 'text-primary' : 'text-primary/40'}`}>PIX</span>
+                    </button>
+                  </div>
+
+                  <Button 
+                    className="w-full h-16 rounded-full bg-gold-gradient text-primary-foreground font-black tracking-widest shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:scale-105 transition-transform text-lg"
+                    onClick={handleUpgrade}
+                    disabled={checkoutLoading}
+                  >
+                    {checkoutLoading ? <Loader2 className="animate-spin" /> : paymentMethod === 'card' ? "ASSINAR COM CARTÃO" : "GERAR QR CODE PIX"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Área do PIX Gerado */}
+              {pixData && !isAuthorized && (
+                <div className="mt-4 space-y-6 p-6 rounded-[2rem] bg-background/40 border border-primary/20 text-center animate-in zoom-in-95 duration-500">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary">Aguardando Pagamento</p>
+                    <div className="w-48 h-48 mx-auto bg-white p-2 rounded-2xl shadow-xl">
+                      <img 
+                        src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+                        alt="QR Code PIX" 
+                        className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <Button
+                      variant="outline"
+                      className="w-full h-12 rounded-xl border-primary/20 text-xs font-bold gap-2"
+                      onClick={() => {
+                        navigator.clipboard.writeText(pixData.qr_code);
+                        toast({ title: 'Copiado!', description: 'Código PIX copiado para a área de transferência.' });
+                      }}
+                    >
+                      <Copy size={14} /> COPIAR CÓDIGO PIX
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full text-[10px] text-foreground/40 font-black uppercase tracking-widest"
+                      onClick={() => setPixData(null)}
+                    >
+                      ESCOLHER OUTRO MÉTODO
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 text-primary/60">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">Verificando status em tempo real...</span>
+                  </div>
+                </div>
               )}
             </div>
           </div>

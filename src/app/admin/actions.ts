@@ -78,7 +78,7 @@ export async function fetchUsers(token: string) {
         return fallbackData;
     } catch (err: any) {
         console.error('Server Action Error (fetchUsers):', err);
-        throw err;
+        throw new Error(err?.message || String(err));
     }
 }
 
@@ -112,11 +112,11 @@ export async function updatePlanPrice(token: string, newPrice: number) {
             .update({ price: newPrice })
             .eq('name', 'Premium');
 
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         return true;
     } catch (err: any) {
         console.error('Server Action Error (updatePlanPrice):', err);
-        throw err;
+        throw new Error(err?.message || String(err));
     }
 }
 
@@ -135,11 +135,11 @@ export async function extendTrial(token: string, userId: string) {
             })
             .eq('id', userId);
 
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         return true;
     } catch (err: any) {
         console.error('Server Action Error (extendTrial):', err);
-        throw err;
+        throw new Error(err?.message || String(err));
     }
 }
 
@@ -179,11 +179,11 @@ export async function updateTrialEnd(token: string, userId: string, isoDate: str
             })
             .eq('id', userId);
 
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         return true;
     } catch (err: any) {
         console.error('Server Action Error (updateTrialEnd):', err);
-        throw err;
+        throw new Error(err?.message || String(err));
     }
 }
 
@@ -197,11 +197,11 @@ export async function fetchUserCustomers(token: string, userId: string) {
             .eq('user_id', userId)
             .order('data', { ascending: false });
 
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         return data;
     } catch (err: any) {
         console.error('Server Action Error (fetchUserCustomers):', err);
-        throw err;
+        throw new Error(err?.message || String(err));
     }
 }
 
@@ -214,11 +214,11 @@ export async function updateUserCustomer(token: string, customerId: string, payl
             .update(payload)
             .eq('id', customerId);
 
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         return true;
     } catch (err: any) {
         console.error('Server Action Error (updateUserCustomer):', err);
-        throw err;
+        throw new Error(err?.message || String(err));
     }
 }
 
@@ -231,11 +231,11 @@ export async function deleteUserCustomer(token: string, customerId: string) {
             .delete()
             .eq('id', customerId);
 
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         return true;
     } catch (err: any) {
         console.error('Server Action Error (deleteUserCustomer):', err);
-        throw err;
+        throw new Error(err?.message || String(err));
     }
 }
 

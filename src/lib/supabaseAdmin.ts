@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Cliente Supabase exclusivo para o backend que bypassa as regras de RLS.
 // NUNCA importe este arquivo em componentes do cliente.
@@ -23,3 +23,16 @@ export function getSupabaseAdmin() {
     }
   );
 }
+
+// Named export singleton para compatibilidade com imports diretos:
+// import { supabaseAdmin } from '@/lib/supabaseAdmin'
+let _adminClient: SupabaseClient | null = null;
+export const supabaseAdmin: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    if (!_adminClient) {
+      _adminClient = getSupabaseAdmin();
+    }
+    const value = (_adminClient as any)[prop];
+    return typeof value === 'function' ? value.bind(_adminClient) : value;
+  }
+});

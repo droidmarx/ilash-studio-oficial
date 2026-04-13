@@ -171,18 +171,21 @@ export default function AgendaPage() {
   }, [user, authLoading, router])
 
   const handleOnboardingComplete = async (chatId: string) => {
+    // Atualização otimista: fecha o modal e atualiza estado local IMEDIATAMENTE
+    // para evitar que o tutorial reabra após F5 mesmo em falha de rede
+    setIsOnboardingOpen(false);
+    setPerfil(prev => prev ? {...prev, onboarding_completed: true} : null);
+
+    // Persiste no banco em paralelo (não bloqueia o usuário)
     try {
       if (chatId) {
         await createRecipient({ nome: "Principal", chatID: chatId });
-        console.log("Recipient created successfully for chatId:", chatId);
+        console.log("[Onboarding] Recipient criado para chatId:", chatId);
       }
       await updateOnboardingStatus(true);
-      console.log("Onboarding status updated in DB");
-      setPerfil(prev => prev ? {...prev, onboarding_completed: true} : null);
+      console.log("[Onboarding] Status atualizado no banco com sucesso.");
     } catch (error) {
-      console.error("Erro crítico ao completar onboarding (o modal será fechado de qualquer forma):", error);
-    } finally {
-      setIsOnboardingOpen(false);
+      console.error("[Onboarding] Erro ao persistir status (estado local já atualizado):", error);
     }
   };
 

@@ -91,39 +91,33 @@ export default function AdminDashboard() {
       setLoading(true);
       const activeToken = accessToken || getActiveToken();
       
-      const [usersData, planData] = await Promise.all([
+      const [usersResult, planData] = await Promise.all([
         fetchUsers(activeToken),
         fetchPlan(activeToken)
       ]);
       
-      setUsers(usersData);
+      // fetchUsers agora retorna { success, error, data }
+      if (usersResult && 'success' in usersResult) {
+        if (usersResult.success) {
+          setUsers(usersResult.data || []);
+        } else {
+          toast({ title: 'Erro ao carregar usuários', description: usersResult.error, variant: 'destructive', duration: 8000 });
+          setUsers([]);
+        }
+      } else {
+        // fallback para formato antigo
+        setUsers((usersResult as any) || []);
+      }
+      
       setPlan(planData);
       setNewPrice(planData?.price?.toString() || '');
     } catch (error: any) {
       console.error(error);
-      
-      // Se falhou, vamos rodar um diagnóstico
-      try {
-        const health = await getServerHealth();
-        const config = (health as any).config;
-        const diagnosticMsg = `Erros detectados: 
-          URL: ${config?.hasUrl ? '✅' : '❌'} 
-          ServiceKey: ${config?.hasServiceKey ? '✅' : '❌'} 
-          AnonKey: ${config?.hasAnonKey ? '✅' : '❌'}`;
-        
-        toast({ 
-          title: 'Erro de Servidor', 
-          description: diagnosticMsg, 
-          variant: 'destructive',
-          duration: 10000 
-        });
-      } catch (healthErr) {
-        toast({ 
-          title: 'Erro de Carregamento', 
-          description: error.message || 'Falha na comunicação com o servidor.', 
-          variant: 'destructive' 
-        });
-      }
+      toast({ 
+        title: 'Erro de Carregamento', 
+        description: error.message || 'Falha na comunicação com o servidor.', 
+        variant: 'destructive' 
+      });
     } finally {
       setLoading(false);
     }
@@ -148,16 +142,20 @@ export default function AdminDashboard() {
   const handleUpdateUserProfile = async (userId: string, data: any) => {
     setActionLoading(`user-upd-${userId}`);
     try {
-      await updateUserProfile(getActiveToken(), userId, data);
-      toast({ title: 'Sucesso', description: 'Perfil do usuário atualizado.' });
-      setEditingUser(null);
-      loadData(getActiveToken());
+      const result = await updateUserProfile(getActiveToken(), userId, data);
+      // result agora é { success, error } - nunca lança exceção
+      if (result && result.success) {
+        toast({ title: 'Sucesso', description: 'Perfil do usuário atualizado.' });
+        setEditingUser(null);
+        loadData(getActiveToken());
+      } else {
+        const msg = result?.error || 'Falha desconhecida ao atualizar perfil';
+        console.error('[Admin UI] updateUserProfile falhou:', msg);
+        toast({ title: 'Erro ao Salvar', description: msg, variant: 'destructive', duration: 8000 });
+      }
     } catch (error: any) {
-       toast({ 
-         title: 'Erro', 
-         description: error.message || 'Falha ao atualizar perfil.', 
-         variant: 'destructive' 
-       });
+      // Safety net - não deveria chegar aqui
+      toast({ title: 'Erro Inesperado', description: error.message || 'Erro interno', variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -166,11 +164,15 @@ export default function AdminDashboard() {
   const handleExtendTrial = async (userId: string) => {
     setActionLoading(`extend-${userId}`);
     try {
-      await extendTrial(getActiveToken(), userId);
-      toast({ title: 'Sucesso', description: 'Mais 30 dias concedidos.' });
-      loadData(getActiveToken());
-    } catch (error) {
-      toast({ title: 'Erro', description: 'Falha ao estender trial.', variant: 'destructive' });
+      const result = await extendTrial(getActiveToken(), userId);
+      if (result && result.success) {
+        toast({ title: 'Sucesso', description: 'Mais 30 dias concedidos.' });
+        loadData(getActiveToken());
+      } else {
+        toast({ title: 'Erro', description: result?.error || 'Falha ao estender trial.', variant: 'destructive' });
+      }
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message || 'Falha ao estender trial.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
     }
@@ -215,10 +217,14 @@ export default function AdminDashboard() {
       const dateObj = new Date(newDate);
       if (isNaN(dateObj.getTime())) throw new Error("Data inválida");
       
-      await updateTrialEnd(getActiveToken(), userId, dateObj.toISOString());
-      toast({ title: 'Sucesso', description: 'Data de vencimento atualizada.' });
-      setEditingDate(null);
-      loadData(getActiveToken());
+      const result = await updateTrialEnd(getActiveToken(), userId, dateObj.toISOString());
+      if (result && result.success) {
+        toast({ title: 'Sucesso', description: 'Data de vencimento atualizada.' });
+        setEditingDate(null);
+        loadData(getActiveToken());
+      } else {
+        toast({ title: 'Erro', description: result?.error || 'Falha ao atualizar data.', variant: 'destructive' });
+      }
     } catch (error: any) {
        toast({ 
          title: 'Erro', 

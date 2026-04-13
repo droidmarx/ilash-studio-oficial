@@ -31,54 +31,68 @@ async function checkAdmin(token: string) {
 
 export async function updateUserProfile(token: string, userId: string, data: any) {
     try {
-        if (!await checkAdmin(token)) throw new Error('Unauthorized');
+        if (!await checkAdmin(token)) return { success: false, error: 'Unauthorized' };
 
+        // Sanitiza o payload - só envia colunas válidas da tabela perfis
+        const allowedFields = ['nome_exibicao', 'slug', 'subscription_status', 'trial_end', 
+                               'custom_price', 'onboarding_completed', 'plan', 'role'];
+        const safeData: any = {};
+        for (const key of allowedFields) {
+            if (key in data && data[key] !== undefined) {
+                safeData[key] = data[key];
+            }
+        }
+
+        if (Object.keys(safeData).length === 0) {
+            return { success: false, error: 'Nenhum campo válido para atualizar' };
+        }
+
+        console.log('[Admin] updateUserProfile userId:', userId, 'payload:', safeData);
         const admin = getSupabaseAdmin();
         const { error } = await admin
             .from('perfis')
-            .update(data)
+            .update(safeData)
             .eq('id', userId);
 
         if (error) {
-            console.error('Admin DB Update Error:', error);
-            throw new Error(`Erro no Banco: ${error.message}`);
+            console.error('[Admin] DB Update Error (full):', JSON.stringify(error));
+            return { success: false, error: `Erro DB: ${error.message} (code: ${error.code})` };
         }
-        return true;
+        console.log('[Admin] updateUserProfile: success');
+        return { success: true, error: null };
     } catch (err: any) {
-        console.error('Server Action Crash (updateUserProfile):', err);
-        throw new Error(err.message || 'Falha interna ao atualizar perfil');
+        console.error('[Admin] Crash updateUserProfile:', err);
+        return { success: false, error: err?.message || String(err) };
     }
 }
 
 export async function fetchUsers(token: string) {
     try {
-        if (!await checkAdmin(token)) throw new Error('Unauthorized');
+        if (!await checkAdmin(token)) return { success: false, error: 'Unauthorized', data: null };
 
-        // Tentativa 1: Busca Completa com todas as colunas
         const { data, error } = await getSupabaseAdmin()
             .from('perfis')
             .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed')
             .order('id', { ascending: false });
 
-        if (!error) return data;
+        if (!error) return { success: true, error: null, data };
 
-        console.warn('Busca completa falhou, tentando busca básica de fallback:', error.message);
+        console.warn('[Admin] Busca completa falhou, tentando fallback:', error.message);
 
-        // Tentativa 2: Busca de Fallback (apenas colunas fundamentais que sabemos que existem desde o início)
         const { data: fallbackData, error: fallbackError } = await getSupabaseAdmin()
             .from('perfis')
             .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role')
             .order('id', { ascending: false });
 
         if (fallbackError) {
-            console.error('Busca de fallback também falhou:', fallbackError);
-            throw new Error(`DB Error: ${fallbackError.message}`);
+            console.error('[Admin] Busca fallback falhou:', fallbackError);
+            return { success: false, error: `DB Error: ${fallbackError.message}`, data: null };
         }
 
-        return fallbackData;
+        return { success: true, error: null, data: fallbackData };
     } catch (err: any) {
-        console.error('Server Action Error (fetchUsers):', err);
-        throw new Error(err?.message || String(err));
+        console.error('[Admin] Server Action Error (fetchUsers):', err);
+        return { success: false, error: err?.message || String(err), data: null };
     }
 }
 
@@ -122,7 +136,7 @@ export async function updatePlanPrice(token: string, newPrice: number) {
 
 export async function extendTrial(token: string, userId: string) {
     try {
-        if (!await checkAdmin(token)) throw new Error('Unauthorized');
+        if (!await checkAdmin(token)) return { success: false, error: 'Unauthorized' };
 
         const newTrialEnd = new Date();
         newTrialEnd.setDate(newTrialEnd.getDate() + 30);
@@ -135,11 +149,11 @@ export async function extendTrial(token: string, userId: string) {
             })
             .eq('id', userId);
 
-        if (error) throw new Error(error.message);
-        return true;
+        if (error) return { success: false, error: error.message };
+        return { success: true, error: null };
     } catch (err: any) {
-        console.error('Server Action Error (extendTrial):', err);
-        throw new Error(err?.message || String(err));
+        console.error('[Admin] Server Action Error (extendTrial):', err);
+        return { success: false, error: err?.message || String(err) };
     }
 }
 
@@ -169,7 +183,7 @@ export async function deleteUserPermanent(token: string, userId: string) {
 
 export async function updateTrialEnd(token: string, userId: string, isoDate: string) {
     try {
-        if (!await checkAdmin(token)) throw new Error('Unauthorized');
+        if (!await checkAdmin(token)) return { success: false, error: 'Unauthorized' };
 
         const { error } = await getSupabaseAdmin()
             .from('perfis')
@@ -179,11 +193,11 @@ export async function updateTrialEnd(token: string, userId: string, isoDate: str
             })
             .eq('id', userId);
 
-        if (error) throw new Error(error.message);
-        return true;
+        if (error) return { success: false, error: error.message };
+        return { success: true, error: null };
     } catch (err: any) {
-        console.error('Server Action Error (updateTrialEnd):', err);
-        throw new Error(err?.message || String(err));
+        console.error('[Admin] Server Action Error (updateTrialEnd):', err);
+        return { success: false, error: err?.message || String(err) };
     }
 }
 

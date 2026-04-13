@@ -144,8 +144,10 @@ export default function AgendaPage() {
               updateProfile({ avatar_url: googleAvatar });
             }
 
-            // Check if onboarding is needed (Explicit check for false or undefined)
-            if (p.onboarding_completed === false || p.onboarding_completed === null || p.onboarding_completed === undefined) {
+            // Check if onboarding is needed
+            // Guard duplo: banco + localStorage para garantir que só abre 1 vez
+            const completedLocally = localStorage.getItem(`onboarding_done_${p.id}`) === 'true';
+            if (!completedLocally && (p.onboarding_completed === false || p.onboarding_completed === null || p.onboarding_completed === undefined)) {
               setIsOnboardingOpen(true)
             }
           } else {
@@ -172,11 +174,12 @@ export default function AgendaPage() {
 
   const handleOnboardingComplete = async (chatId: string) => {
     // Atualização otimista: fecha o modal e atualiza estado local IMEDIATAMENTE
-    // para evitar que o tutorial reabra após F5 mesmo em falha de rede
     setIsOnboardingOpen(false);
     setPerfil(prev => prev ? {...prev, onboarding_completed: true} : null);
+    // Guard localStorage: garante que não reabre mesmo se o DB falhar
+    if (user?.id) localStorage.setItem(`onboarding_done_${user.id}`, 'true');
 
-    // Persiste no banco em paralelo (não bloqueia o usuário)
+    // Persiste no banco em paralelo
     try {
       if (chatId) {
         await createRecipient({ nome: "Principal", chatID: chatId });
@@ -391,19 +394,31 @@ export default function AgendaPage() {
                  )}
 
                  {daysRemaining !== null && (
-                   <div className="mt-4 flex justify-center md:justify-start">
-                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-2xl border border-primary/20">
-                       <Clock size={14} className="text-primary" />
-                       <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Dias Restantes:</span>
-                       <span className={cn(
-                         "text-sm font-black",
-                         daysRemaining <= 5 ? "text-destructive animate-pulse" : "text-primary"
-                       )}>
-                         {daysRemaining} dias
-                       </span>
-                     </div>
-                   </div>
-                 )}
+                    <div className="mt-4 flex justify-center md:justify-start flex-wrap gap-3">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-2xl border border-primary/20">
+                        <Clock size={14} className="text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Dias Restantes:</span>
+                        <span className={cn(
+                          "text-sm font-black",
+                          daysRemaining <= 5 ? "text-destructive animate-pulse" : "text-primary"
+                        )}>
+                          {daysRemaining} dias
+                        </span>
+                      </div>
+                      {/* Botão de pagamento — aparece junto ao contador de trial */}
+                      <button
+                        onClick={() => router.push('/subscription')}
+                        className={cn(
+                          "inline-flex items-center gap-2 px-4 py-2 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all duration-300 hover:scale-105",
+                          daysRemaining <= 5
+                            ? "bg-destructive/20 border-destructive/40 text-destructive hover:bg-destructive/30 animate-pulse"
+                            : "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
+                        )}
+                      >
+                        💳 {daysRemaining <= 0 ? 'Renovar Acesso' : 'Assinar / Renovar'}
+                      </button>
+                    </div>
+                  )}
               </div>
            </div>
 

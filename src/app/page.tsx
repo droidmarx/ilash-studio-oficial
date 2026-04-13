@@ -394,7 +394,7 @@ export default function AgendaPage() {
                  )}
 
                  {daysRemaining !== null && (
-                    <div className="mt-4 flex justify-center md:justify-start flex-wrap gap-3">
+                    <div className="mt-4 flex flex-col items-center md:items-start gap-2">
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-2xl border border-primary/20">
                         <Clock size={14} className="text-primary" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-primary/60">Dias Restantes:</span>
@@ -405,11 +405,10 @@ export default function AgendaPage() {
                           {daysRemaining} dias
                         </span>
                       </div>
-                      {/* Botão de pagamento — aparece junto ao contador de trial */}
                       <button
                         onClick={() => router.push('/subscription')}
                         className={cn(
-                          "inline-flex items-center gap-2 px-4 py-2 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all duration-300 hover:scale-105",
+                          "inline-flex items-center gap-2 px-5 py-2 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all duration-300 hover:scale-105",
                           daysRemaining <= 5
                             ? "bg-destructive/20 border-destructive/40 text-destructive hover:bg-destructive/30 animate-pulse"
                             : "bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"

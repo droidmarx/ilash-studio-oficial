@@ -498,10 +498,16 @@ export default function AdminDashboard() {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-8 w-8 text-green-500 hover:text-green-400"
-                                onClick={() => handleUpdateUserProfile(u.id, { 
-                                  nome_exibicao: editingUser.nome_exibicao,
-                                  custom_price: parseFloat(editingUser.custom_price) || null
-                                })}
+                                onClick={() => {
+                                  const updatePayload: any = { 
+                                    nome_exibicao: editingUser.nome_exibicao,
+                                  };
+                                  const cp = parseFloat(editingUser.custom_price);
+                                  if (!isNaN(cp) && isFinite(cp)) {
+                                    updatePayload.custom_price = cp;
+                                  }
+                                  handleUpdateUserProfile(u.id, updatePayload);
+                                }}
                                 disabled={actionLoading === `user-upd-${u.id}`}
                               >
                                 {actionLoading === `user-upd-${u.id}` ? <Loader2 className="animate-spin" size={12} /> : <Save size={14} />}

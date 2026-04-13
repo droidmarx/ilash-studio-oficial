@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 

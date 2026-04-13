@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Loader2, Mail, Lock, UserPlus, Eye, EyeOff } from "lucide-react"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
-import { useAuth } from "@/components/auth/AuthContext"
+import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {

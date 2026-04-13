@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { LogOut, ShieldAlert, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 

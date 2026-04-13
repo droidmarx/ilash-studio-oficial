@@ -13,7 +13,7 @@ interface AuthContextType {
   stopImpersonating: () => void;
 }
 
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   loading: true,
@@ -98,6 +98,3 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   )
 }
 
-export function useAuth() {
-  return useContext(AuthContext)
-}

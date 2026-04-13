@@ -4,7 +4,7 @@ import { logAction } from '@/app/actions/audit';
 import { addMonths, subMonths, isSameDay, parse, isValid, getMonth, getDate, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { sendTelegramNotification } from '@/app/actions/notifications';
-import { useAuth } from '@/components/auth/AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { parseBirthday } from '@/lib/utils';
 
 export function useAgenda() {

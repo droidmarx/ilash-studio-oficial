@@ -60,7 +60,7 @@ import Image from "next/image"
 
 import { SetupModal } from "@/components/auth/SetupModal"
 import { getProfile, updateProfile, Perfil, updateOnboardingStatus, createRecipient } from "@/lib/api"
-import { useAuth } from "@/components/auth/AuthContext"
+import { useAuth } from "@/hooks/use-auth"
 import { OnboardingTutorial } from "@/components/onboarding/OnboardingTutorial"
 
 export default function AgendaPage() {

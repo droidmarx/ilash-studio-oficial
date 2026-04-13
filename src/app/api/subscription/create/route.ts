@@ -23,10 +23,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Fetch User Profile
+    // 2. Fetch User Profile (including custom_price)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('perfis')
-      .select('email, id')
+      .select('email, id, custom_price')
       .eq('id', user.id)
       .single();
 
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       console.error('[API] Profile not found for user:', user.id);
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
-    console.log('[API] Profile found:', profile.email);
+    console.log('[API] Profile found:', profile.email, '| custom_price:', profile.custom_price);
 
     // 3. Fetch default Plan
     // Fallback to R$ 14,99 if table doesn't have it.
@@ -44,8 +44,11 @@ export async function POST(request: Request) {
       .eq('name', 'Premium')
       .maybeSingle();
 
-    const price = plan?.price || 14.99;
+    // Prioridade: custom_price do perfil > plan.price global > 9.99 padrão
+    const defaultPrice = plan?.price || 9.99;
+    const price = (profile.custom_price && profile.custom_price > 0) ? Number(profile.custom_price) : defaultPrice;
     const planName = plan?.name || 'I Lash Studio Premium';
+    console.log('[API] Preço aplicado:', price, '| Fonte:', profile.custom_price ? 'custom_price do perfil' : 'plano global');
 
     // 4. Create Preapproval in Mercado Pago
     // We send user.id as external_reference to identify it later via webhook webhook

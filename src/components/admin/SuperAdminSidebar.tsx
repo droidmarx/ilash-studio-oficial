@@ -51,11 +51,11 @@ export default function SuperAdminSidebar({ user }: { user: any }) {
   const { signOut } = useAuth();
 
   const menuItems = [
-    { href: '/admin/super-admin', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-    { href: '/admin/super-admin/users', icon: <Users size={20} />, label: 'Usuários' },
-    { href: '/admin/super-admin/subscriptions', icon: <CreditCard size={20} />, label: 'Assinaturas' },
-    { href: '/admin/super-admin/logs', icon: <History size={20} />, label: 'Logs de Auditoria' },
-    { href: '/admin/super-admin/settings', icon: <Settings size={20} />, label: 'Configurações' },
+    { href: '/super-admin', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+    { href: '/super-admin/users', icon: <Users size={20} />, label: 'Usuários' },
+    { href: '/super-admin/subscriptions', icon: <CreditCard size={20} />, label: 'Assinaturas' },
+    { href: '/super-admin/logs', icon: <History size={20} />, label: 'Logs de Auditoria' },
+    { href: '/super-admin/settings', icon: <Settings size={20} />, label: 'Configurações' },
   ];
 
   return (

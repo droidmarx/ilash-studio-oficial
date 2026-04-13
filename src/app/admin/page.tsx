@@ -344,48 +344,23 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center gap-4 border-b border-primary/20 pb-4">
-        <ShieldAlert className="text-primary w-10 h-10" />
-        <div>
-          <h1 className="text-4xl font-headline text-gold-gradient">Painel de Controle Administrador</h1>
-          <p className="text-sm tracking-widest uppercase text-muted-foreground">Gerenciamento completo da plataforma</p>
+      <div className="flex items-center justify-between border-b border-primary/20 pb-4">
+        <div className="flex items-center gap-4">
+          <ShieldAlert className="text-primary w-10 h-10" />
+          <div>
+            <h1 className="text-4xl font-headline text-gold-gradient">Painel de Controle Administrador</h1>
+            <p className="text-sm tracking-widest uppercase text-muted-foreground">Gerenciamento completo da plataforma</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-black uppercase tracking-widest text-primary/40">Total de Usuários</p>
+          <p className="text-4xl font-headline text-gold-gradient">{users.length}</p>
+          <p className="text-[10px] text-primary/30 uppercase tracking-widest">Padrão: R$ 9,99/mês</p>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-8">
-        <Card className="bg-card/60 backdrop-blur-3xl border-primary/20 rounded-3xl h-fit">
-          <CardHeader>
-            <CardTitle className="text-xl text-primary">Configurações do Plano</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Preço Mensal (R$)</label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={newPrice}
-                  onChange={e => setNewPrice(e.target.value)}
-                  className="bg-background border-primary/20 rounded-xl"
-                />
-                <Button
-                  onClick={handleUpdatePrice}
-                  disabled={actionLoading === 'price'}
-                  className="bg-primary hover:bg-primary/80 text-primary-foreground rounded-xl"
-                >
-                  {actionLoading === 'price' ? <Loader2 className="animate-spin w-4 h-4" /> : 'Salvar'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-primary/10 text-sm space-y-2 text-muted-foreground">
-              <p><strong>Plano Ativo:</strong> {plan?.name}</p>
-              <p><strong>Total Usuários:</strong> {users.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-2 bg-card/60 backdrop-blur-3xl border-primary/20 rounded-3xl overflow-hidden">
+      <div className="grid grid-cols-1 gap-8">
+        <Card className="bg-card/60 backdrop-blur-3xl border-primary/20 rounded-3xl overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
@@ -471,10 +446,13 @@ export default function AdminDashboard() {
                                step="0.01"
                                value={editingUser.custom_price}
                                onChange={e => setEditingUser({ ...editingUser, custom_price: e.target.value })}
-                               className="h-8 w-20 text-xs bg-background border-primary/20"
+                               className="h-8 w-24 text-xs bg-background border-primary/20"
+                               placeholder="9.99"
                            />
                          ) : (
-                           <span className="font-mono text-xs">R$ {u.custom_price || plan?.price || '0.00'}</span>
+                           <span className="font-mono text-xs font-bold text-primary">
+                             R$ {Number(u.custom_price ?? 9.99).toFixed(2).replace('.', ',')}
+                           </span>
                          )}
                       </TableCell>
                       <TableCell>
@@ -502,10 +480,9 @@ export default function AdminDashboard() {
                                   const updatePayload: any = { 
                                     nome_exibicao: editingUser.nome_exibicao,
                                   };
+                                  // custom_price: usa o digitado, ou 9.99 como padrão
                                   const cp = parseFloat(editingUser.custom_price);
-                                  if (!isNaN(cp) && isFinite(cp)) {
-                                    updatePayload.custom_price = cp;
-                                  }
+                                  updatePayload.custom_price = (!isNaN(cp) && isFinite(cp)) ? cp : 9.99;
                                   handleUpdateUserProfile(u.id, updatePayload);
                                 }}
                                 disabled={actionLoading === `user-upd-${u.id}`}

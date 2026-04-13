@@ -13,6 +13,7 @@ import {
   deleteUserPermanent,
   updateTrialEnd,
   fetchUserCustomers,
+  fetchUserTechniques,
   updateUserCustomer,
   deleteUserCustomer,
   updateUserProfile,
@@ -51,6 +52,7 @@ export default function AdminDashboard() {
   // Manage Customers State
   const [managingUser, setManagingUser] = useState<any | null>(null);
   const [userCustomers, setUserCustomers] = useState<any[]>([]);
+  const [userTechniques, setUserTechniques] = useState<string[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
   const [customerModalLoading, setCustomerModalLoading] = useState(false);
 
@@ -143,18 +145,18 @@ export default function AdminDashboard() {
     setActionLoading(`user-upd-${userId}`);
     try {
       const result = await updateUserProfile(getActiveToken(), userId, data);
-      // result agora é { success, error } - nunca lança exceção
       if (result && result.success) {
+        // Atualização otimista: atualiza o estado local imediatamente
+        // evita que o custom_price reverta para 9.99 por causa do cache do schema do Supabase
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...data } : u));
         toast({ title: 'Sucesso', description: 'Perfil do usuário atualizado.' });
         setEditingUser(null);
-        loadData(getActiveToken());
       } else {
         const msg = result?.error || 'Falha desconhecida ao atualizar perfil';
         console.error('[Admin UI] updateUserProfile falhou:', msg);
         toast({ title: 'Erro ao Salvar', description: msg, variant: 'destructive', duration: 8000 });
       }
     } catch (error: any) {
-      // Safety net - não deveria chegar aqui
       toast({ title: 'Erro Inesperado', description: error.message || 'Erro interno', variant: 'destructive' });
     } finally {
       setActionLoading(null);
@@ -238,10 +240,15 @@ export default function AdminDashboard() {
 
   const handleManageCustomers = async (u: any) => {
     setManagingUser(u);
+    setUserTechniques([]);
     setCustomerModalLoading(true);
     try {
-      const data = await fetchUserCustomers(getActiveToken(), u.id);
-      setUserCustomers(data || []);
+      const [customers, techniques] = await Promise.all([
+        fetchUserCustomers(getActiveToken(), u.id),
+        fetchUserTechniques(getActiveToken(), u.id),
+      ]);
+      setUserCustomers(customers || []);
+      setUserTechniques(techniques);
     } catch (error: any) {
       toast({ title: 'Erro', description: 'Falha ao carregar clientes do usuário.', variant: 'destructive' });
     } finally {
@@ -600,17 +607,24 @@ export default function AdminDashboard() {
                         <TableCell>
                           {editingCustomer?.id === c.id ? (
                             <div className="flex flex-col gap-1">
-                              <Input 
-                                value={editingCustomer.servico} 
+                              <select
+                                value={editingCustomer.servico}
                                 onChange={(e) => setEditingCustomer({...editingCustomer, servico: e.target.value})}
-                                className="h-8 text-xs bg-background border-primary/20"
-                              />
-                              <Input 
-                                value={editingCustomer.tipo} 
+                                className="h-8 text-xs bg-background border border-primary/20 rounded-md px-2 text-foreground"
+                              >
+                                {userTechniques.map(t => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={editingCustomer.tipo}
                                 onChange={(e) => setEditingCustomer({...editingCustomer, tipo: e.target.value})}
-                                placeholder="Tipo (Aplicação...)"
-                                className="h-8 text-[10px] bg-background border-primary/20"
-                              />
+                                className="h-8 text-[10px] bg-background border border-primary/20 rounded-md px-2 text-foreground"
+                              >
+                                <option value="Aplicação">Aplicação</option>
+                                <option value="Manutenção">Manutenção</option>
+                                <option value="Remoção">Remoção</option>
+                              </select>
                             </div>
                           ) : (
                             <div className="flex flex-col">

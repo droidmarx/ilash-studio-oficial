@@ -219,6 +219,25 @@ export async function fetchUserCustomers(token: string, userId: string) {
     }
 }
 
+export async function fetchUserTechniques(token: string, userId: string): Promise<string[]> {
+    const defaultTechniques = ['Brasileiro', 'Egípcio', '4D', '5D', 'Fio-a-Fio', 'Fox'];
+    try {
+        if (!await checkAdmin(token)) return defaultTechniques;
+
+        const { data } = await getSupabaseAdmin()
+            .from('configuracoes')
+            .select('valor')
+            .eq('user_id', userId)
+            .eq('nome', 'TECHNIQUES')
+            .maybeSingle();
+
+        if (!data?.valor) return defaultTechniques;
+        return JSON.parse(data.valor);
+    } catch {
+        return defaultTechniques;
+    }
+}
+
 export async function updateUserCustomer(token: string, customerId: string, payload: any) {
     try {
         if (!await checkAdmin(token)) throw new Error('Unauthorized');

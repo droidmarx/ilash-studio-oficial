@@ -123,7 +123,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const getActiveToken = () => token || 'ilash105046';
+  const getActiveToken = () => 'ilash105046';
 
   const handleUpdatePrice = async () => {
     if (!newPrice) return;

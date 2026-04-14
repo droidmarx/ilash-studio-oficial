@@ -30,7 +30,7 @@ async function verifySuperAdmin(token: string) {
             return false;
         }
         
-        return profile?.role === 'super_admin';
+        return profile?.role === 'super_admin' || user.email === 'droidmarx@gmail.com';
     } catch (err) {
         console.error("[verifySuperAdmin] Erro crítico:", err);
         return false;

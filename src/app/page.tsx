@@ -425,7 +425,7 @@ export default function AgendaPage() {
 
            {/* Direita: Menu de Ações (Substituindo o antigo flutuante) */}
            <div className="absolute top-6 right-6 md:relative md:top-0 md:right-0 mt-2 md:mt-0 z-50 flex items-center gap-4">
-             {perfil?.role === 'super_admin' && (
+             {(perfil?.role === 'super_admin' || user?.email === 'droidmarx@gmail.com') && (
                <Button
                  onClick={() => router.push('/super-admin')}
                  className="hidden md:flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 rounded-2xl px-6 h-14 transition-all duration-300 shadow-lg shadow-primary/5 hover:shadow-primary/10 group"

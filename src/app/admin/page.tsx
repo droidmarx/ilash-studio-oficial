@@ -359,12 +359,24 @@ export default function AdminDashboard() {
             <p className="text-sm tracking-widest uppercase text-muted-foreground">Gerenciamento completo da plataforma</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-xs font-black uppercase tracking-widest text-primary/40">Total de Usuários</p>
-          <p className="text-4xl font-headline text-gold-gradient">{users.length}</p>
-          <p className="text-[10px] text-primary/30 uppercase tracking-widest">Padrão: R$ 9,99/mês</p>
+        <div className="text-right flex flex-col items-end gap-2">
+          {user?.email === 'droidmarx@gmail.com' && (
+             <Button
+               onClick={() => router.push('/super-admin')}
+               variant="outline"
+               className="border-primary/20 text-primary hover:bg-primary/10 gap-2 font-bold mb-2 shadow-lg"
+             >
+               <ShieldAlert size={16} /> Painel Master
+             </Button>
+          )}
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-primary/40">Total de Usuários</p>
+            <p className="text-4xl font-headline text-gold-gradient">{users.length}</p>
+            <p className="text-[10px] text-primary/30 uppercase tracking-widest">Padrão: R$ 9,99/mês</p>
+          </div>
         </div>
       </div>
+
 
       <div className="grid grid-cols-1 gap-8">
         <Card className="bg-card/60 backdrop-blur-3xl border-primary/20 rounded-3xl overflow-hidden">

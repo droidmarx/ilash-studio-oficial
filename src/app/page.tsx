@@ -428,10 +428,10 @@ export default function AgendaPage() {
              {(perfil?.role === 'super_admin' || user?.email === 'droidmarx@gmail.com') && (
                <Button
                  onClick={() => router.push('/super-admin')}
-                 className="hidden md:flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 rounded-2xl px-6 h-14 transition-all duration-300 shadow-lg shadow-primary/5 hover:shadow-primary/10 group"
+                 className="flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 rounded-2xl px-4 md:px-6 h-14 transition-all duration-300 shadow-lg shadow-primary/5 hover:shadow-primary/10 group"
                >
                  <ShieldCheck size={20} className="group-hover:scale-110 transition-transform" />
-                 <span className="font-black text-[10px] uppercase tracking-widest">Painel Master</span>
+                 <span className="hidden sm:inline font-black text-[10px] uppercase tracking-widest">Painel Master</span>
                </Button>
              )}
 

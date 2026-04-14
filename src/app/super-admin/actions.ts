@@ -29,117 +29,153 @@ async function checkAdmin(token: string) {
 }
 
 export async function getDashboardStats(token: string) {
-    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized', data: null };
 
-    const admin = getSupabaseAdmin();
+        const admin = getSupabaseAdmin();
 
-    const [
-        { count: totalUsers },
-        { count: activeSubs },
-        { count: trialUsers },
-        { count: totalAppointments },
-        { data: revenueData }
-    ] = await Promise.all([
-        admin.from('perfis').select('*', { count: 'exact', head: true }),
-        admin.from('perfis').select('*', { count: 'exact', head: true }).eq('subscription_status', 'authorized'),
-        admin.from('perfis').select('*', { count: 'exact', head: true }).eq('subscription_status', 'trial'),
-        admin.from('agendamentos').select('*', { count: 'exact', head: true }),
-        admin.from('perfis').select('custom_price').eq('subscription_status', 'authorized')
-    ]);
+        const [
+            { count: totalUsers, error: err1 },
+            { count: activeSubs, error: err2 },
+            { count: trialUsers, error: err3 },
+            { count: totalAppointments, error: err4 },
+            { data: revenueData, error: err5 }
+        ] = await Promise.all([
+            admin.from('perfis').select('*', { count: 'exact', head: true }),
+            admin.from('perfis').select('*', { count: 'exact', head: true }).eq('subscription_status', 'authorized'),
+            admin.from('perfis').select('*', { count: 'exact', head: true }).eq('subscription_status', 'trial'),
+            admin.from('agendamentos').select('*', { count: 'exact', head: true }),
+            admin.from('perfis').select('custom_price').eq('subscription_status', 'authorized')
+        ]);
 
-    const monthlyRevenue = (revenueData || []).reduce((acc, curr) => acc + (Number(curr.custom_price) || 14.99), 0);
+        if (err1 || err2 || err3 || err4 || err5) {
+            console.error('Erro parcial no dashboard:', { err1, err2, err3, err4, err5 });
+        }
 
-    return {
-        totalUsers: totalUsers || 0,
-        activeSubs: activeSubs || 0,
-        trialUsers: trialUsers || 0,
-        monthlyRevenue,
-        totalAppointments: totalAppointments || 0
-    };
+        const monthlyRevenue = (revenueData || []).reduce((acc, curr) => acc + (Number(curr.custom_price) || 14.99), 0);
+
+        return {
+            data: {
+                totalUsers: totalUsers || 0,
+                activeSubs: activeSubs || 0,
+                trialUsers: trialUsers || 0,
+                monthlyRevenue,
+                totalAppointments: totalAppointments || 0
+            },
+            error: null
+        };
+    } catch (err: any) {
+        console.error('Crash getDashboardStats:', err);
+        return { error: err.message || 'Erro interno no servidor', data: null };
+    }
 }
 
 export async function getRecentActivity(token: string) {
-    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized', data: null };
 
-    const { data, error } = await getSupabaseAdmin()
-        .from('admin_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+        const { data, error } = await getSupabaseAdmin()
+            .from('admin_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(10);
 
-    if (error) {
-        console.warn('Erro ao buscar logs (tabela admin_logs pode não existir):', error.message);
-        return [];
+        if (error) {
+            console.warn('Tabela admin_logs pode não existir:', error.message);
+            return { data: [], error: null }; // Retorna vazio em vez de crashar
+        }
+        return { data: data || [], error: null };
+    } catch (err: any) {
+        return { data: [], error: null };
     }
-    return data || [];
 }
 
 export async function fetchAllUsers(token: string, searchTerm: string = '', statusFilter: string = 'all') {
-    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized', data: null };
 
-    let query = getSupabaseAdmin()
-        .from('perfis')
-        .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed, created_at')
-        .order('created_at', { ascending: false });
+        let query = getSupabaseAdmin()
+            .from('perfis')
+            .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed, created_at')
+            .order('created_at', { ascending: false });
 
-    if (searchTerm) {
-        query = query.or(`email.ilike.%${searchTerm}%,nome_exibicao.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%`);
+        if (searchTerm) {
+            query = query.or(`email.ilike.%${searchTerm}%,nome_exibicao.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%`);
+        }
+
+        if (statusFilter !== 'all') {
+            query = query.eq('subscription_status', statusFilter);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return { data: data || [], error: null };
+    } catch (err: any) {
+        return { error: err.message, data: null };
     }
-
-    if (statusFilter !== 'all') {
-        query = query.eq('subscription_status', statusFilter);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data || [];
 }
 
 export async function updateUserRole(token: string, userId: string, newRole: string) {
-    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
 
-    const { error } = await getSupabaseAdmin()
-        .from('perfis')
-        .update({ role: newRole })
-        .eq('id', userId);
+        const { error } = await getSupabaseAdmin()
+            .from('perfis')
+            .update({ role: newRole })
+            .eq('id', userId);
 
-    if (error) throw error;
-    return true;
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        return { error: err.message };
+    }
 }
 
 export async function createAdminLog(token: string, action: string, targetId: string, details: any = {}) {
-    if (!await checkAdmin(token)) return; // Silently fail for logs if not admin
+    try {
+        if (!await checkAdmin(token)) return;
 
-    await getSupabaseAdmin()
-        .from('admin_logs')
-        .insert({
-            action,
-            target_id: targetId,
-            details,
-            created_at: new Date().toISOString()
-        });
+        await getSupabaseAdmin()
+            .from('admin_logs')
+            .insert({
+                action,
+                target_id: targetId,
+                details,
+                created_at: new Date().toISOString()
+            });
+    } catch (e) {
+        console.warn('Falha ao criar log administrativo (tabela pode não existir)');
+    }
 }
 
 export async function fetchAllSubscriptions(token: string) {
-    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized', data: null };
 
-    const { data, error } = await getSupabaseAdmin()
-        .from('subscriptions')
-        .select('*, perfis(email, nome_exibicao)')
-        .order('created_at', { ascending: false });
+        const { data, error } = await getSupabaseAdmin()
+            .from('subscriptions')
+            .select('*, perfis(email, nome_exibicao)')
+            .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+        if (error) throw error;
+        return { data: data || [], error: null };
+    } catch (err: any) {
+        return { error: err.message, data: null };
+    }
 }
 
 export async function manualUpdateSubscription(token: string, subscriptionId: string, status: string) {
-    if (!await checkAdmin(token)) throw new Error('Unauthorized');
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
 
-    const { error } = await getSupabaseAdmin()
-        .from('subscriptions')
-        .update({ status })
-        .eq('id', subscriptionId);
+        const { error } = await getSupabaseAdmin()
+            .from('subscriptions')
+            .update({ status })
+            .eq('id', subscriptionId);
 
-    if (error) throw error;
-    return true;
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        return { error: err.message };
+    }
 }

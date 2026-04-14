@@ -38,13 +38,20 @@ export default function SuperAdminDashboard() {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token || 'ilash105046';
 
-        const [statsData, logsData] = await Promise.all([
+        const [statsResponse, logsResponse] = await Promise.all([
           getDashboardStats(token),
           getRecentActivity(token)
         ]);
 
-        setStats(statsData);
-        setLogs(logsData);
+        if (statsResponse.error) {
+           setError(statsResponse.error);
+        } else {
+           setStats(statsResponse.data);
+        }
+
+        if (!logsResponse.error) {
+           setLogs(logsResponse.data || []);
+        }
       } catch (err: any) {
         console.error("Erro ao carregar dashboard:", err);
         setError(String(err?.message || err || "Falha ao carregar dados do servidor."));

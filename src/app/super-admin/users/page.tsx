@@ -66,8 +66,13 @@ export default function UsersManagementPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || 'ilash105046';
       
-      const data = await fetchAllUsers(token, searchTerm, statusFilter);
-      setUsers(data);
+      const { data, error: fetchError } = await fetchAllUsers(token, searchTerm, statusFilter);
+      
+      if (fetchError) {
+        throw new Error(fetchError);
+      }
+      
+      setUsers(data || []);
     } catch (err) {
       toast({
         title: "Erro ao carregar usuários",

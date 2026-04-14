@@ -42,8 +42,9 @@ export default function SubscriptionsPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token || 'ilash105046';
-        const data = await fetchAllSubscriptions(token);
-        setSubscriptions(data);
+        const { data, error } = await fetchAllSubscriptions(token);
+        if (error) throw new Error(error);
+        setSubscriptions(data || []);
       } catch (err) {
         toast({ title: "Erro ao carregar assinaturas", variant: "destructive" });
       } finally {

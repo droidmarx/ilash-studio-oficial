@@ -69,11 +69,12 @@ export async function fetchAllUsers(token: string, search?: string, status?: str
     try {
         if (!await verifySuperAdmin(token)) throw new Error("Não autorizado");
 
+        console.log("[fetchAllUsers] Iniciando busca segura...");
         const admin = getSupabaseAdmin();
         let query = admin
             .from('perfis')
-            .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed, created_at')
-            .order('created_at', { ascending: false });
+            .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, custom_price, onboarding_completed')
+            .order('email', { ascending: true });
 
         if (search) {
             query = query.or(`email.ilike.%${search}%,nome_exibicao.ilike.%${search}%,slug.ilike.%${search}%`);
@@ -84,7 +85,11 @@ export async function fetchAllUsers(token: string, search?: string, status?: str
         }
 
         const { data, error } = await query;
-        if (error) throw error;
+        if (error) {
+            console.error("[fetchAllUsers] Erro na consulta Supabase:", error.message);
+            throw error;
+        }
+        console.log(`[fetchAllUsers] Sucesso: ${data?.length || 0} usuários.`);
         return data || [];
     } catch (error: any) {
         console.error("[fetchAllUsers] Erro:", error.message);

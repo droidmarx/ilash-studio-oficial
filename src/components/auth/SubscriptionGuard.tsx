@@ -70,10 +70,10 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
       setHasAccess(access);
 
       if (!access && pathname !== '/subscription' && !pathname.startsWith('/admin')) {
-        router.push('/subscription');
+        router.replace('/subscription');
       } else if (pathname.startsWith('/admin') && profile.role !== 'admin') {
         // Protect /admin
-        router.push('/');
+        router.replace('/');
       }
     };
 

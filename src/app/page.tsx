@@ -126,7 +126,7 @@ export default function AgendaPage() {
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
-        router.push("/login")
+        router.replace("/login")
       } else {
         setIsAuthorized(true)
         

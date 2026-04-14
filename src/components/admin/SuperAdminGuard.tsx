@@ -16,7 +16,7 @@ export default function SuperAdminGuard({ children }: { children: React.ReactNod
       if (authLoading) return;
       
       if (!user) {
-        router.push('/login');
+        router.replace('/login');
         return;
       }
 
@@ -31,7 +31,7 @@ export default function SuperAdminGuard({ children }: { children: React.ReactNod
         if (error) {
           console.error("[SuperAdminGuard] Erro ao buscar role:", error.message);
           setIsAuthorized(false);
-          router.push('/admin');
+          router.replace('/admin');
           return;
         }
 
@@ -40,7 +40,7 @@ export default function SuperAdminGuard({ children }: { children: React.ReactNod
         if (data?.role !== 'super_admin') {
           console.warn("[SuperAdminGuard] Acesso negado: Usuário não é super_admin");
           setIsAuthorized(false);
-          router.push('/admin');
+          router.replace('/admin');
           return;
         }
 
@@ -48,7 +48,7 @@ export default function SuperAdminGuard({ children }: { children: React.ReactNod
       } catch (err) {
         console.error("[SuperAdminGuard] Erro inesperado na autorização:", err);
         setIsAuthorized(false);
-        router.push('/admin');
+        router.replace('/admin');
       }
     }
 

@@ -26,7 +26,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.push("/")
+      router.replace("/")
     }
   }, [user, authLoading, router])
 
@@ -60,7 +60,7 @@ export default function LoginPage() {
           password,
         })
         if (signInError) throw signInError
-        router.push("/")
+        router.replace("/")
       }
     } catch (err: any) {
       setError(err.message || "Ocorreu um erro na autenticação.")

@@ -15,8 +15,10 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
-  ExternalLink
+  ExternalLink,
+  RefreshCcw
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Table, 
   TableBody, 
@@ -52,12 +54,14 @@ import { useToast } from '@/hooks/use-toast';
 export default function UsersManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const { toast } = useToast();
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || 'ilash105046';
@@ -70,6 +74,7 @@ export default function UsersManagementPage() {
         description: "Não foi possível buscar a lista de usuários.",
         variant: "destructive"
       });
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -172,28 +177,46 @@ export default function UsersManagementPage() {
 
       {/* Users Table */}
       <div className="bg-card/40 backdrop-blur-3xl border border-border/40 rounded-[2rem] overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="p-20 flex justify-center"><Loader2 className="animate-spin text-primary" size={40} /></div>
+        {error ? (
+          <div className="p-20 flex flex-col items-center justify-center gap-4 text-center">
+             <AlertTriangle className="text-destructive w-12 h-12" />
+             <div>
+               <h3 className="text-lg font-bold text-foreground">Falha ao carregar</h3>
+               <p className="text-sm text-muted-foreground">Ocorreu um erro ao buscar os usuários.</p>
+             </div>
+             <Button onClick={loadUsers} variant="outline" className="gap-2 mt-2">
+                <RefreshCcw size={16} /> Tentar Novamente
+             </Button>
+          </div>
+        ) : loading ? (
+          <div className="p-6 space-y-4">
+            <Skeleton className="h-10 w-full rounded-xl bg-primary/10" />
+            <Skeleton className="h-16 w-full rounded-xl bg-primary/5" />
+            <Skeleton className="h-16 w-full rounded-xl bg-primary/5" />
+            <Skeleton className="h-16 w-full rounded-xl bg-primary/5" />
+            <Skeleton className="h-16 w-full rounded-xl bg-primary/5" />
+          </div>
         ) : (
-          <Table>
-            <TableHeader className="bg-primary/5">
-              <TableRow className="border-border/40 hover:bg-transparent">
-                <TableHead className="text-[10px] font-black uppercase text-primary/40 px-6 py-4">Usuário / Estúdio</TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-primary/40">Status</TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-primary/40">Role</TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-primary/40">Plano / Preço</TableHead>
-                <TableHead className="text-[10px] font-black uppercase text-primary/40">Cadastro</TableHead>
-                <TableHead className="text-right text-[10px] font-black uppercase text-primary/40 px-6">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-40 text-center text-muted-foreground italic">Nenhum usuário encontrado.</TableCell>
+          <div className="overflow-x-auto w-full">
+            <Table className="min-w-[800px]">
+              <TableHeader className="bg-primary/5">
+                <TableRow className="border-border/40 hover:bg-transparent">
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40 px-6 py-4">Usuário / Estúdio</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Status</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Role</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Plano / Preço</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Cadastro</TableHead>
+                  <TableHead className="text-right text-[10px] font-black uppercase text-primary/40 px-6">Ações</TableHead>
                 </TableRow>
-              ) : (
-                users.map((u) => (
-                  <TableRow key={u.id} className="border-border/40 hover:bg-primary/5 transition-colors group">
+              </TableHeader>
+              <TableBody>
+                {!(users || []).length ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-40 text-center text-muted-foreground italic">Nenhum usuário encontrado.</TableCell>
+                  </TableRow>
+                ) : (
+                  (users || []).map((u) => (
+                    <TableRow key={u.id} className="border-border/40 hover:bg-primary/5 transition-colors group">
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gold-gradient flex items-center justify-center font-bold text-primary-foreground shadow-sm">
@@ -275,6 +298,7 @@ export default function UsersManagementPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         )}
       </div>
     </div>

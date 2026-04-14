@@ -19,17 +19,15 @@ export default function SuperAdminLayout({
   return (
     <ErrorBoundary>
       <SuperAdminGuard>
-        <div className="flex min-h-screen bg-background text-foreground">
+        <div className="flex min-h-screen bg-background text-foreground overflow-x-hidden w-full">
           {/* Sidebar */}
           <SuperAdminSidebar user={displayUser} />
           
           {/* Main Content */}
-          <main className="flex-1 overflow-y-auto">
-            <ErrorBoundary>
-              <div className="p-8 lg:p-12 max-w-7xl mx-auto animate-in fade-in duration-700">
-                {children}
-              </div>
-            </ErrorBoundary>
+          <main className="flex-1 min-w-0">
+            <div className="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto animate-in fade-in duration-700">
+              {children}
+            </div>
           </main>
         </div>
       </SuperAdminGuard>

@@ -220,3 +220,22 @@ export async function manualUpdateSubscription(token: string, subscriptionId: st
         return { error: err.message };
     }
 }
+
+export async function clearOldLogs(token: string) {
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const { count, error } = await getSupabaseAdmin()
+            .from('admin_logs')
+            .delete({ count: 'exact' })
+            .lt('created_at', thirtyDaysAgo.toISOString());
+
+        if (error) throw error;
+        return { success: true, count };
+    } catch (err: any) {
+        return { error: err.message };
+    }
+}

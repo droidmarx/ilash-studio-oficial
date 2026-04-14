@@ -24,7 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getRecentActivity } from '../actions';
+import { getRecentActivity, clearOldLogs } from '../actions';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -33,25 +33,51 @@ import { useToast } from '@/hooks/use-toast';
 export default function LogsPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    async function loadLogs() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token || 'ilash105046';
-        const { data, error } = await getRecentActivity(token);
-        if (error) throw new Error(error);
-        setLogs(data || []);
-      } catch (err) {
-        toast({ title: "Erro ao carregar logs", variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
+  const loadLogs = async () => {
+    try {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || 'ilash105046';
+      const { data, error } = await getRecentActivity(token);
+      if (error) throw new Error(error);
+      setLogs(data || []);
+    } catch (err) {
+      toast({ title: "Erro ao carregar logs", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadLogs();
   }, [toast]);
+
+  const handleClearLogs = async () => {
+    if (!confirm("Tem certeza que deseja apagar os logs com mais de 30 dias?")) return;
+    
+    try {
+      setClearing(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || 'ilash105046';
+      
+      const res = await clearOldLogs(token);
+      if (res.error) throw new Error(res.error);
+
+      toast({ 
+        title: "Logs limpos", 
+        description: `${res.count || 0} registros antigos foram removidos.` 
+      });
+      loadLogs();
+    } catch (err) {
+      toast({ title: "Erro ao limpar logs", variant: "destructive" });
+    } finally {
+      setClearing(false);
+    }
+  };
 
   const getActionBadge = (action: string) => {
     switch (action) {
@@ -80,8 +106,14 @@ export default function LogsPage() {
             Histórico completo de ações administrativas
           </p>
         </div>
-        <Button variant="outline" className="rounded-2xl border-primary/10 text-xs font-bold gap-2 hover:bg-destructive/5 hover:text-destructive">
-          <Trash2 size={16} /> Limpar Logs Antigos
+        <Button 
+          variant="outline" 
+          onClick={handleClearLogs}
+          disabled={clearing}
+          className="rounded-2xl border-primary/10 text-xs font-bold gap-2 hover:bg-destructive/5 hover:text-destructive transition-all active:scale-95"
+        >
+          {clearing ? <Loader2 size={16} className="animate-spin text-destructive" /> : <Trash2 size={16} />}
+          {clearing ? 'Limpando...' : 'Limpar Logs Antigos'}
         </Button>
       </div>
 

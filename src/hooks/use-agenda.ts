@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getClients, createClient, updateClient, deleteClient, Client } from '@/lib/api';
 import { logAction } from '@/app/actions/audit';
 import { addMonths, subMonths, isSameDay, parse, isValid, getMonth, getDate, parseISO } from 'date-fns';
@@ -6,6 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 import { sendTelegramNotification } from '@/app/actions/notifications';
 import { useAuth } from '@/hooks/use-auth';
 import { parseBirthday } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+
+export type RealtimeStatus = 'connecting' | 'connected' | 'disconnected';
 
 export function useAgenda() {
   const { user, impersonatedUser } = useAuth();
@@ -13,7 +16,11 @@ export function useAgenda() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>('connecting');
   const { toast } = useToast();
+
+  // Deduplication: track recently processed realtime event IDs
+  const processedIds = useRef<Set<string>>(new Set());
 
   const fetchClients = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -34,6 +41,79 @@ export function useAgenda() {
   useEffect(() => {
     fetchClients();
   }, [fetchClients]);
+
+  // ─── Supabase Realtime ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!effectiveUserId) return;
+
+    setRealtimeStatus('connecting');
+
+    const channel = supabase
+      .channel(`agenda-realtime-${effectiveUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agendamentos',
+          filter: `user_id=eq.${effectiveUserId}`,
+        },
+        (payload) => {
+          // ── Deduplication ──────────────────────────────────────────────────
+          const eventId = `${payload.eventType}-${(payload.new as any)?.id || (payload.old as any)?.id}-${Date.now()}`;
+          const stableId = `${payload.eventType}-${(payload.new as any)?.id || (payload.old as any)?.id}`;
+
+          if (processedIds.current.has(stableId)) return;
+          processedIds.current.add(stableId);
+          // Clear after 2s to allow future updates to the same record
+          setTimeout(() => processedIds.current.delete(stableId), 2000);
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Realtime] Evento recebido:', payload);
+          }
+
+          // ── Silent refetch ─────────────────────────────────────────────────
+          fetchClients(true);
+
+          // ── Toast por tipo de evento ───────────────────────────────────────
+          const clientName = (payload.new as any)?.nome || (payload.old as any)?.nome || 'Cliente';
+
+          if (payload.eventType === 'INSERT') {
+            toast({
+              title: "📅 Novo agendamento",
+              description: `${clientName} foi adicionado à agenda.`,
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            toast({
+              title: "✏️ Agendamento atualizado",
+              description: `${clientName} foi modificado.`,
+            });
+          } else if (payload.eventType === 'DELETE') {
+            toast({
+              variant: "destructive",
+              title: "❌ Agendamento cancelado",
+              description: `${(payload.old as any)?.nome || 'Agendamento'} foi removido.`,
+            });
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Realtime] Conectado ao canal de agendamentos.');
+          }
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setRealtimeStatus('disconnected');
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setRealtimeStatus('disconnected');
+    };
+  }, [effectiveUserId, fetchClients, toast]);
+  // ────────────────────────────────────────────────────────────────────────────
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -148,9 +228,8 @@ export function useAgenda() {
       }
 
       toast({ title: "Excluído", description: "Agendamento removido com sucesso." });
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
+      // ✅ Corrigido: usar silent refetch em vez de window.location.reload()
+      await fetchClients(true);
     } catch (error) {
       toast({ variant: "destructive", title: "Erro", description: "Falha ao excluir." });
       setLoading(false);
@@ -169,6 +248,7 @@ export function useAgenda() {
     addAppointment,
     editAppointment,
     removeAppointment,
-    refresh: fetchClients
+    refresh: fetchClients,
+    realtimeStatus,
   };
 }

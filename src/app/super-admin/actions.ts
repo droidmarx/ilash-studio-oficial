@@ -94,9 +94,13 @@ export async function fetchAllUsers(token: string, searchTerm: string = '', stat
     try {
         if (!await checkAdmin(token)) return { error: 'Unauthorized', data: null };
 
-        let query = getSupabaseAdmin()
+        const admin = getSupabaseAdmin();
+        const selectFields = 'id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed, created_at';
+        
+        // Tenta a busca completa
+        let query = admin
             .from('perfis')
-            .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed, created_at')
+            .select(selectFields)
             .order('created_at', { ascending: false });
 
         if (searchTerm) {
@@ -108,9 +112,30 @@ export async function fetchAllUsers(token: string, searchTerm: string = '', stat
         }
 
         const { data, error } = await query;
-        if (error) throw error;
+        
+        if (error) {
+            console.warn('Busca completa de usuários falhou (provavelmente colunas ausentes):', error.message);
+            
+            // Fallback para colunas básicas que garantidamente existem
+            const fallbackFields = 'id, email, nome_exibicao, role, created_at';
+            let fallbackQuery = admin
+                .from('perfis')
+                .select(fallbackFields)
+                .order('created_at', { ascending: false });
+            
+            if (searchTerm) {
+                fallbackQuery = fallbackQuery.or(`email.ilike.%${searchTerm}%,nome_exibicao.ilike.%${searchTerm}%`);
+            }
+            
+            const { data: fbData, error: fbError } = await fallbackQuery;
+            if (fbError) throw fbError;
+            
+            return { data: fbData || [], error: null, warning: 'Versão simplificada dos dados (algumas colunas não encontradas).' };
+        }
+        
         return { data: data || [], error: null };
     } catch (err: any) {
+        console.error('Erro fatal em fetchAllUsers:', err);
         return { error: err.message, data: null };
     }
 }

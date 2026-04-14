@@ -423,7 +423,17 @@ export default function AgendaPage() {
            </div>
 
            {/* Direita: Menu de Ações (Substituindo o antigo flutuante) */}
-           <div className="absolute top-6 right-6 md:relative md:top-0 md:right-0 mt-2 md:mt-0 z-50">
+           <div className="absolute top-6 right-6 md:relative md:top-0 md:right-0 mt-2 md:mt-0 z-50 flex items-center gap-4">
+             {perfil?.role === 'super_admin' && (
+               <Button
+                 onClick={() => router.push('/super-admin')}
+                 className="hidden md:flex items-center gap-2 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 rounded-2xl px-6 h-14 transition-all duration-300 shadow-lg shadow-primary/5 hover:shadow-primary/10 group"
+               >
+                 <ShieldCheck size={20} className="group-hover:scale-110 transition-transform" />
+                 <span className="font-black text-[10px] uppercase tracking-widest">Painel Master</span>
+               </Button>
+             )}
+
              <DropdownMenu modal={false} open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                <DropdownMenuTrigger asChild>
                  <Button

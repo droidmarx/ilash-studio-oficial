@@ -47,7 +47,7 @@ export default function SuperAdminDashboard() {
         setLogs(logsData);
       } catch (err: any) {
         console.error("Erro ao carregar dashboard:", err);
-        setError(err.message || "Falha ao carregar dados do servidor.");
+        setError(String(err?.message || err || "Falha ao carregar dados do servidor."));
       } finally {
         setLoading(false);
       }
@@ -68,7 +68,7 @@ export default function SuperAdminDashboard() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-destructive gap-4">
         <AlertCircle size={48} />
-        <p className="font-bold">{error}</p>
+        <p className="font-bold text-center">{String(error)}</p>
       </div>
     );
   }
@@ -76,7 +76,7 @@ export default function SuperAdminDashboard() {
   const statCards = [
     { 
       title: 'Usuários Totais', 
-      value: stats?.totalUsers, 
+      value: stats?.totalUsers ?? 0, 
       icon: <Users className="text-blue-500" />, 
       desc: 'Base total de cadastros',
       trend: '+12%',
@@ -84,7 +84,7 @@ export default function SuperAdminDashboard() {
     },
     { 
       title: 'Assinaturas Ativas', 
-      value: stats?.activeSubs, 
+      value: stats?.activeSubs ?? 0, 
       icon: <CreditCard className="text-green-500" />, 
       desc: 'Pagantes recorrentes',
       trend: '+5%',
@@ -92,7 +92,7 @@ export default function SuperAdminDashboard() {
     },
     { 
       title: 'Receita Mensal', 
-      value: `R$ ${stats?.monthlyRevenue?.toFixed(2).replace('.', ',')}`, 
+      value: `R$ ${Number(stats?.monthlyRevenue || 0).toFixed(2).replace('.', ',')}`, 
       icon: <TrendingUp className="text-gold-gradient" />, 
       desc: 'MRR Estimado',
       trend: '+8%',
@@ -100,7 +100,7 @@ export default function SuperAdminDashboard() {
     },
     { 
       title: 'Agendamentos', 
-      value: stats?.totalAppointments, 
+      value: stats?.totalAppointments ?? 0, 
       icon: <Calendar className="text-purple-500" />, 
       desc: 'Total no sistema',
       trend: '+24%',

@@ -55,7 +55,7 @@ export default function SuperAdminGuard({ children }: { children: React.ReactNod
     checkRole();
   }, [user, authLoading, router]);
 
-  if (authLoading || isAuthorized === null) {
+  if (authLoading || isAuthorized === null || isAuthorized === false) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="text-center space-y-4">

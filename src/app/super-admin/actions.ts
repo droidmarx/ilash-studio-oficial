@@ -140,6 +140,22 @@ export async function fetchAllUsers(token: string, searchTerm: string = '', stat
     }
 }
 
+export async function updateUserPrice(token: string, userId: string, newPrice: number) {
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
+
+        const { error } = await getSupabaseAdmin()
+            .from('perfis')
+            .update({ custom_price: newPrice })
+            .eq('id', userId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        return { error: err.message };
+    }
+}
+
 export async function updateUserRole(token: string, userId: string, newRole: string) {
     try {
         if (!await checkAdmin(token)) return { error: 'Unauthorized' };

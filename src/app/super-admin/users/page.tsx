@@ -16,9 +16,18 @@ import {
   Clock,
   AlertTriangle,
   ExternalLink,
-  RefreshCcw
+  RefreshCcw,
+  DollarSign
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { 
   Table, 
   TableBody, 
@@ -45,7 +54,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { fetchAllUsers, updateUserRole, createAdminLog } from '../actions';
+import { fetchAllUsers, updateUserRole, createAdminLog, updateUserPrice } from '../actions';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -57,6 +66,8 @@ export default function UsersManagementPage() {
   const [error, setError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [editingPriceUser, setEditingPriceUser] = useState<any>(null);
+  const [newPrice, setNewPrice] = useState<string>('');
   const { toast } = useToast();
 
   const loadUsers = useCallback(async () => {
@@ -97,13 +108,40 @@ export default function UsersManagementPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || 'ilash105046';
       
-      await updateUserRole(token, userId, newRole);
+      const res = await updateUserRole(token, userId, newRole);
+      if (res.error) throw new Error(res.error);
+
       await createAdminLog(token, 'ROLE_UPDATE', userId, { newRole });
       
       toast({ title: "Role atualizada", description: `Usuário agora é ${newRole}` });
       loadUsers();
     } catch (err) {
       toast({ title: "Erro ao atualizar role", variant: "destructive" });
+    }
+  };
+
+  const handleUpdatePrice = async () => {
+    if (!editingPriceUser) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || 'ilash105046';
+      const price = parseFloat(newPrice.replace(',', '.'));
+      
+      if (isNaN(price)) {
+        toast({ title: "Valor inválido", variant: "destructive" });
+        return;
+      }
+
+      const res = await updateUserPrice(token, editingPriceUser.id, price);
+      if (res.error) throw new Error(res.error);
+
+      await createAdminLog(token, 'PRICE_UPDATE', editingPriceUser.id, { oldPrice: editingPriceUser.custom_price, newPrice: price });
+      
+      toast({ title: "Preço atualizado", description: `Novo valor: R$ ${price.toFixed(2)}` });
+      setEditingPriceUser(null);
+      loadUsers();
+    } catch (err) {
+      toast({ title: "Erro ao atualizar preço", variant: "destructive" });
     }
   };
 
@@ -275,6 +313,15 @@ export default function UsersManagementPage() {
                           >
                             <LogIn size={16} className="text-primary" /> Entrar como Usuário
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setEditingPriceUser(u);
+                              setNewPrice(String(u.custom_price || 9.99));
+                            }}
+                            className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
+                          >
+                            <DollarSign size={16} className="text-green-500" /> Alterar Preço
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="rounded-xl flex gap-2 font-bold text-xs p-3">
                             <Calendar size={16} className="text-blue-500" /> Detalhes da Assinatura
                           </DropdownMenuItem>
@@ -306,6 +353,42 @@ export default function UsersManagementPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Price Dialog */}
+      <Dialog open={!!editingPriceUser} onOpenChange={(open) => !open && setEditingPriceUser(null)}>
+        <DialogContent className="bg-card border-border/40 rounded-3xl sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-headline">Ajustar Valor Mensal</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground uppercase font-black">
+              Defina um preço personalizado para {editingPriceUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-primary/40 px-1">Novo Valor (R$)</label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <Input 
+                  type="text"
+                  placeholder="9,99"
+                  className="pl-10 h-12 bg-background border-border/40 rounded-2xl font-bold"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground bg-primary/5 p-4 rounded-2xl italic leading-relaxed">
+              O novo valor será aplicado imediatamente em novas cobranças e visualizado pelo usuário em seu painel de assinatura.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setEditingPriceUser(null)} className="rounded-xl font-bold">Cancelar</Button>
+            <Button onClick={handleUpdatePrice} className="bg-gold-gradient text-primary-foreground rounded-xl font-bold px-8 shadow-lg shadow-primary/20">
+              Salvar Novo Preço
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

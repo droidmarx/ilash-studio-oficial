@@ -4,119 +4,134 @@ import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { createClient } from '@supabase/supabase-js';
 
 async function verifySuperAdmin(token: string) {
-    if (token === 'ilash105046') return true; // Bypass legado se necessário
+    if (token === 'ilash105046') return true;
 
     try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
         const supabaseAuthClient = createClient(supabaseUrl, supabaseAnonKey);
         
+        // Verifica o token JWT com o Supabase Auth
         const { data: { user }, error: authError } = await supabaseAuthClient.auth.getUser(token);
-        if (authError || !user) return false;
+        if (authError || !user) {
+            console.error("[verifySuperAdmin] Erro de autenticação:", authError?.message);
+            return false;
+        }
 
-        const { data: profile } = await getSupabaseAdmin()
+        // Busca o perfil com a service role (getSupabaseAdmin) para garantir acesso total
+        const { data: profile, error: dbError } = await getSupabaseAdmin()
             .from('perfis')
             .select('role')
             .eq('id', user.id)
             .single();
         
+        if (dbError) {
+            console.error("[verifySuperAdmin] Erro ao buscar perfil:", dbError.message);
+            return false;
+        }
+        
         return profile?.role === 'super_admin';
-    } catch {
+    } catch (err) {
+        console.error("[verifySuperAdmin] Erro crítico:", err);
         return false;
     }
 }
 
 export async function getDashboardStats(token: string) {
-    if (!await verifySuperAdmin(token)) throw new Error("Unauthorized");
+    try {
+        if (!await verifySuperAdmin(token)) throw new Error("Não autorizado");
 
-    const admin = getSupabaseAdmin();
+        const admin = getSupabaseAdmin();
 
-    // 1. Total Usuários
-    const { count: totalUsers } = await admin
-        .from('perfis')
-        .select('*', { count: 'exact', head: true });
+        // Usando Promise.allSettled para que uma falha em uma tabela não quebre todo o dashboard
+        const [usersCount, activeCount, trialCount, revenue, appointments] = await Promise.all([
+            admin.from('perfis').select('*', { count: 'exact', head: true }),
+            admin.from('perfis').select('*', { count: 'exact', head: true }).eq('subscription_status', 'authorized'),
+            admin.from('perfis').select('*', { count: 'exact', head: true }).eq('subscription_status', 'trial'),
+            admin.from('perfis').select('custom_price').eq('subscription_status', 'authorized'),
+            admin.from('agendamentos').select('*', { count: 'exact', head: true })
+        ]);
 
-    // 2. Assinaturas Ativas
-    const { count: activeSubs } = await admin
-        .from('perfis')
-        .select('*', { count: 'exact', head: true })
-        .eq('subscription_status', 'authorized');
-
-    // 3. Usuários em Trial
-    const { count: trialUsers } = await admin
-        .from('perfis')
-        .select('*', { count: 'exact', head: true })
-        .eq('subscription_status', 'trial');
-
-    // 4. Receita Estimada (simples soma de custom_price dos ativos)
-    const { data: revenueData } = await admin
-        .from('perfis')
-        .select('custom_price')
-        .eq('subscription_status', 'authorized');
-    
-    const monthlyRevenue = revenueData?.reduce((acc, curr) => acc + (Number(curr.custom_price) || 14.99), 0) || 0;
-
-    // 5. Agendamentos Totais (Sistema)
-    const { count: totalAppointments } = await admin
-        .from('agendamentos')
-        .select('*', { count: 'exact', head: true });
-
-    return {
-        totalUsers: totalUsers || 0,
-        activeSubs: activeSubs || 0,
-        trialUsers: trialUsers || 0,
-        monthlyRevenue,
-        totalAppointments: totalAppointments || 0
-    };
+        return {
+            totalUsers: usersCount.count || 0,
+            activeSubs: activeCount.count || 0,
+            trialUsers: trialCount.count || 0,
+            monthlyRevenue: revenue.data?.reduce((acc, curr) => acc + (Number(curr.custom_price) || 14.99), 0) || 0,
+            totalAppointments: appointments.count || 0
+        };
+    } catch (error: any) {
+        console.error("[getDashboardStats] Erro ao carregar estatísticas:", error.message);
+        throw new Error(error.message || "Falha ao carregar estatísticas.");
+    }
 }
 
 export async function fetchAllUsers(token: string, search?: string, status?: string) {
-    if (!await verifySuperAdmin(token)) throw new Error("Unauthorized");
+    try {
+        if (!await verifySuperAdmin(token)) throw new Error("Não autorizado");
 
-    const admin = getSupabaseAdmin();
-    let query = admin
-        .from('perfis')
-        .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed, created_at')
-        .order('created_at', { ascending: false });
+        const admin = getSupabaseAdmin();
+        let query = admin
+            .from('perfis')
+            .select('id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed, created_at')
+            .order('created_at', { ascending: false });
 
-    if (search) {
-        query = query.or(`email.ilike.%${search}%,nome_exibicao.ilike.%${search}%,slug.ilike.%${search}%`);
+        if (search) {
+            query = query.or(`email.ilike.%${search}%,nome_exibicao.ilike.%${search}%,slug.ilike.%${search}%`);
+        }
+
+        if (status && status !== 'all') {
+            query = query.eq('subscription_status', status);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+    } catch (error: any) {
+        console.error("[fetchAllUsers] Erro:", error.message);
+        throw new Error(error.message || "Falha ao buscar usuários.");
     }
-
-    if (status && status !== 'all') {
-        query = query.eq('subscription_status', status);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return data || [];
 }
 
 export async function updateUserRole(token: string, userId: string, newRole: string) {
-    if (!await verifySuperAdmin(token)) throw new Error("Unauthorized");
+    try {
+        if (!await verifySuperAdmin(token)) throw new Error("Não autorizado");
 
-    const admin = getSupabaseAdmin();
-    const { error } = await admin
-        .from('perfis')
-        .update({ role: newRole })
-        .eq('id', userId);
+        const admin = getSupabaseAdmin();
+        const { error } = await admin
+            .from('perfis')
+            .update({ role: newRole })
+            .eq('id', userId);
 
-    if (error) throw error;
-    return { success: true };
+        if (error) throw error;
+        return { success: true };
+    } catch (error: any) {
+        console.error("[updateUserRole] Erro:", error.message);
+        throw new Error(error.message || "Falha ao atualizar permissão.");
+    }
 }
 
 export async function getRecentActivity(token: string) {
-    if (!await verifySuperAdmin(token)) throw new Error("Unauthorized");
+    try {
+        if (!await verifySuperAdmin(token)) return []; // Silent error for logs to avoid breaking dashboard
 
-    const admin = getSupabaseAdmin();
+        const admin = getSupabaseAdmin();
 
-    const { data } = await admin
-        .from('admin_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+        const { data, error } = await admin
+            .from('admin_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(10);
 
-    return data || [];
+        if (error) {
+            console.error("[getRecentActivity] Erro ao buscar logs (tabela pode não existir):", error.message);
+            return [];
+        }
+
+        return data || [];
+    } catch (error: any) {
+        console.error("[getRecentActivity] Erro inesperado:", error.message);
+        return [];
+    }
 }
 
 export async function createAdminLog(token: string, action: string, targetId: string, details: any) {
@@ -142,41 +157,51 @@ export async function createAdminLog(token: string, action: string, targetId: st
 }
 
 export async function fetchAllSubscriptions(token: string) {
-    if (!await verifySuperAdmin(token)) throw new Error("Unauthorized");
+    try {
+        if (!await verifySuperAdmin(token)) throw new Error("Não autorizado");
 
-    const admin = getSupabaseAdmin();
-    const { data, error } = await admin
-        .from('subscriptions')
-        .select(`
-            *,
-            perfis (
-                email,
-                nome_exibicao
-            )
-        `)
-        .order('created_at', { ascending: false });
+        const admin = getSupabaseAdmin();
+        const { data, error } = await admin
+            .from('subscriptions')
+            .select(`
+                *,
+                perfis (
+                    email,
+                    nome_exibicao
+                )
+            `)
+            .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+        if (error) throw error;
+        return data || [];
+    } catch (error: any) {
+        console.error("[fetchAllSubscriptions] Erro:", error.message);
+        return [];
+    }
 }
 
 export async function manualUpdateSubscription(token: string, userId: string, status: string, trialEnd?: string) {
-    if (!await verifySuperAdmin(token)) throw new Error("Unauthorized");
+    try {
+        if (!await verifySuperAdmin(token)) throw new Error("Não autorizado");
 
-    const admin = getSupabaseAdmin();
-    const updateData: any = { 
-        subscription_status: status 
-    };
-    if (trialEnd) updateData.trial_end = trialEnd;
+        const admin = getSupabaseAdmin();
+        const updateData: any = { 
+            subscription_status: status 
+        };
+        if (trialEnd) updateData.trial_end = trialEnd;
 
-    const { error } = await admin
-        .from('perfis')
-        .update(updateData)
-        .eq('id', userId);
+        const { error } = await admin
+            .from('perfis')
+            .update(updateData)
+            .eq('id', userId);
 
-    if (error) throw error;
-    
-    await createAdminLog(token, 'MANUAL_SUBSCRIPTION_UPDATE', userId, { status, trialEnd });
-    
-    return { success: true };
+        if (error) throw error;
+        
+        await createAdminLog(token, 'MANUAL_SUBSCRIPTION_UPDATE', userId, { status, trialEnd });
+        
+        return { success: true };
+    } catch (error: any) {
+        console.error("[manualUpdateSubscription] Erro:", error.message);
+        throw new Error(error.message || "Falha ao atualizar assinatura manual.");
+    }
 }

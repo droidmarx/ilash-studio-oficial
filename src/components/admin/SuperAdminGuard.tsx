@@ -21,21 +21,33 @@ export default function SuperAdminGuard({ children }: { children: React.ReactNod
       }
 
       try {
+        console.log("[SuperAdminGuard] Verificando role para usuário:", user.id);
         const { data, error } = await supabase
           .from('perfis')
           .select('role')
           .eq('id', user.id)
           .single();
 
-        if (error || data?.role !== 'super_admin') {
-          console.error("Acesso negado: Não é super_admin", error);
-          router.push('/admin'); // Redireciona para o admin comum
+        if (error) {
+          console.error("[SuperAdminGuard] Erro ao buscar role:", error.message);
+          setIsAuthorized(false);
+          router.push('/admin');
+          return;
+        }
+
+        console.log("[SuperAdminGuard] Role encontrada:", data?.role);
+
+        if (data?.role !== 'super_admin') {
+          console.warn("[SuperAdminGuard] Acesso negado: Usuário não é super_admin");
+          setIsAuthorized(false);
+          router.push('/admin');
           return;
         }
 
         setIsAuthorized(true);
       } catch (err) {
-        console.error("Erro ao verificar autorização:", err);
+        console.error("[SuperAdminGuard] Erro inesperado na autorização:", err);
+        setIsAuthorized(false);
         router.push('/admin');
       }
     }

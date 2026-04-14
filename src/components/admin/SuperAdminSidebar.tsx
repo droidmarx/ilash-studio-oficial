@@ -118,7 +118,7 @@ export default function SuperAdminSidebar({ user }: { user: any }) {
           </div>
         </div>
 
-        <Link href="/admin">
+        <Link href="/">
            <Button variant="outline" className="w-full justify-start gap-2 rounded-xl text-primary hover:bg-primary/5 border-primary/10">
               <Zap size={16} />
               <span className="text-xs font-bold uppercase">Painel Studio</span>

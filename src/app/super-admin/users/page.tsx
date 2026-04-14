@@ -161,7 +161,7 @@ export default function UsersManagementPage() {
       });
 
       // Redireciona para o admin principal (que agora deve mostrar os dados do usuário alvo)
-      window.location.href = '/admin';
+      window.location.href = '/';
     } catch (err) {
       toast({ title: "Erro ao iniciar impersonação", variant: "destructive" });
     }

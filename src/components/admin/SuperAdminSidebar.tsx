@@ -118,7 +118,7 @@ export default function SuperAdminSidebar({ user }: { user: any }) {
           </div>
         </div>
 
-        <Link href="/">
+        <Link href="/#">
            <Button variant="outline" className="w-full justify-start gap-2 rounded-xl text-primary hover:bg-primary/5 border-primary/10">
               <Zap size={16} />
               <span className="text-xs font-bold uppercase">Painel Studio</span>
@@ -140,16 +140,18 @@ export default function SuperAdminSidebar({ user }: { user: any }) {
   return (
     <>
       {/* Botão Hamburger Mobile */}
-      <div className="lg:hidden fixed top-4 left-4 z-[60]">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="bg-card/80 backdrop-blur-md border-primary/20 rounded-xl shadow-lg"
-          onClick={() => setIsOpen(true)}
-        >
-          <Menu size={24} className="text-primary" />
-        </Button>
-      </div>
+      {!isOpen && (
+        <div className="lg:hidden fixed top-4 right-4 z-[60] animate-in fade-in zoom-in duration-300">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="bg-card/80 backdrop-blur-md border-primary/20 rounded-xl shadow-lg"
+            onClick={() => setIsOpen(true)}
+          >
+            <Menu size={24} className="text-primary" />
+          </Button>
+        </div>
+      )}
 
       {/* Overlay Mobile */}
       {isOpen && (

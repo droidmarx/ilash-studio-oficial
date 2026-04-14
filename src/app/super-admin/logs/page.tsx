@@ -41,8 +41,9 @@ export default function LogsPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token || 'ilash105046';
-        const data = await getRecentActivity(token);
-        setLogs(data);
+        const { data, error } = await getRecentActivity(token);
+        if (error) throw new Error(error);
+        setLogs(data || []);
       } catch (err) {
         toast({ title: "Erro ao carregar logs", variant: "destructive" });
       } finally {

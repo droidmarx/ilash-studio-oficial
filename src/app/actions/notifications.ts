@@ -45,20 +45,20 @@ export async function sendTelegramNotification({
     } catch { return iso; }
   };
 
-  const actionEmoji = {
-    'Novo': '✨',
-    'Alterado': '🔄',
-    'Removido': '🗑️',
-    'Confirmado': '✅'
-  }[tipo] || '🔔';
+  const actionTitle = {
+    'Novo': '✨ Agendamento Novo! ✨',
+    'Alterado': '🔄 Agendamento Alterado! 🔄',
+    'Removido': '🗑️ Agendamento Cancelado! 🗑️',
+    'Confirmado': '✅ Agendamento Confirmado! ✅'
+  }[tipo] || '🔔 Notificação 🔔';
 
   const formatCurrency = (val: any) => {
     if (!val) return 'R$ 0,00';
     return `R$ ${val.toString().replace('.', ',')}`;
   };
 
-  let message = `👤 <b>${studioName}</b>\n\n`;
-  message += `${actionEmoji} <b>Ação:</b> Cliente ${tipo.toLowerCase()}\n\n`;
+  let message = `${actionTitle}\n\n`;
+  message += `🏢 <b>Studio:</b> ${studioName}\n\n`;
 
   // Se for alteração, mostra o diferencial de forma curta no topo
   if (tipo === 'Alterado' && antes && depois) {
@@ -67,20 +67,18 @@ export async function sendTelegramNotification({
     }
   }
 
-  // ESTADO ATUAL (FULL INFO conforme pedido pelo usuário)
   const info = depois || cliente;
-  message += `📋 <b>DADOS DO AGENDAMENTO (ATUAL):</b>\n`;
   message += `👤 <b>Cliente:</b> ${info.nome}\n`;
+  message += `📌 <b>Status:</b> ${info.confirmado ? 'Confirmado' : 'Pendente'}\n`;
   message += `📅 <b>Data/Hora:</b> ${formatDateTime(info.data)}\n`;
-  message += `🎨 <b>Técnica:</b> ${info.servico}\n`;
+  message += `🎨 <b>Serviço:</b> ${info.servico}\n`;
   message += `🔸 <b>Tipo:</b> ${info.tipo}\n`;
   message += `💰 <b>Valor Base:</b> ${formatCurrency(info.valor)}\n`;
   message += `📱 <b>WhatsApp:</b> ${info.whatsapp || '---'}\n`;
-  message += `✅ <b>Confirmado:</b> ${info.confirmado ? 'Sim' : 'Não'}\n`;
   
   if (info.servicosAdicionais && info.servicosAdicionais.length > 0) {
     const extras = info.servicosAdicionais.map((s: any) => `• ${s.nome} (${formatCurrency(s.valor)})`).join('\n');
-    message += `✨ <b>Adicionais:</b>\n${extras}\n`;
+    message += `\n✨ <b>Adicionais:</b>\n${extras}\n`;
   }
   
   if (info.observacoes) {

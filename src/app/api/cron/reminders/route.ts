@@ -83,9 +83,9 @@ export async function GET(request: Request) {
           let summaryMessage = todayAppointments.length > 0 
             ? `✨ <b>Bom dia! Agenda de Hoje</b> ✨\n\n` + todayAppointments.map(app => {
                 const appDate = app.data.includes('T') ? parseISO(app.data) : parse(app.data, 'dd/MM/yyyy HH:mm', new Date());
-                return `${app.confirmado === false ? "⏳" : "✅"} <b>${format(appDate, 'HH:mm')}</b> - ${app.nome}`;
-              }).join('\n')
-            : `✨ <b>Bom dia!</b> ✨\n\nSem agendamentos hoje.`;
+                return `${app.confirmado === false ? "⏳ (Pendente)" : "✅ (Confirmado)"}\n⏰ ${format(appDate, 'HH:mm')} - ${app.nome}\n🎨 ${app.servico || 'Não informado'}\n`;
+              }).join('\n') + `\n🚀 Tenha um ótimo dia de trabalho!`
+            : `✨ <b>Bom dia!</b> ✨\n\nVocê não tem agendamentos para hoje.\n💖 Que tal aproveitar para organizar o studio?`;
 
           for (const admin of adminRecipients) {
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -118,6 +118,7 @@ export async function GET(request: Request) {
           let msg = customMsgs.telegramReminder;
           msg = msg.replace(/{{cliente}}/g, app.nome);
           msg = msg.replace(/{{hora}}/g, format(parseISO(app.data), 'HH:mm'));
+          msg = msg.replace(/{{servico}}/g, app.servico || 'Não informado');
 
           for (const admin of adminRecipients) {
             await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

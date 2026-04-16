@@ -114,7 +114,7 @@ Confira os detalhes abaixo:
 
 Em caso de dúvidas ou imprevistos, é só me chamar! 💬
 Agradeço pela confiança 💕{{link_anamnese}}`,
-  telegramReminder: `⏰ <b>Lembrete:</b> {{cliente}} às {{hora}}`,
+  telegramReminder: `⏰ Lembrete VIP I Lash Studio\n\n👤 Cliente: {{cliente}}\n🎨 Serviço: {{servico}}\n⏰ Horário: {{hora}}\n\n🚀 Sua cliente chega em breve!`,
 };
 
 export const defaultTechniques: string[] = ["Brasileiro", "Egípcio", "4D", "5D", "Fio-a-Fio", "Fox"];

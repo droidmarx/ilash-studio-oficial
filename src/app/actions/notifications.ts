@@ -8,12 +8,17 @@ import { ptBR } from 'date-fns/locale';
 /**
  * Função central para notificações Telegram (PROMPT CIRÚRGICO)
  */
+import { supabase } from '@/lib/supabase';
+
+/**
+ * Função central para notificações Telegram (PROMPT CIRÚRGICO)
+ */
 export async function sendTelegramNotification({ 
   tipo, 
   cliente, 
   antes, 
   depois,
-  userId 
+  userId: providedUserId 
 }: { 
   tipo: 'Novo' | 'Alterado' | 'Removido' | 'Confirmado', 
   cliente: any, 
@@ -21,6 +26,15 @@ export async function sendTelegramNotification({
   depois?: any,
   userId?: string 
 }) {
+  let userId = providedUserId;
+
+  if (!userId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id;
+  }
+
+  if (!userId) return;
+
   const botToken = await getTelegramToken(userId);
   if (!botToken) return;
 

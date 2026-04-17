@@ -54,11 +54,19 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { fetchAllUsers, updateUserRole, createAdminLog, updateUserPrice } from '../actions';
+import { 
+  fetchAllUsers, 
+  updateUserRole, 
+  createAdminLog, 
+  updateUserPrice, 
+  generateImpersonationToken, 
+  updateUserStatus 
+} from '../actions';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { UserClientsModal } from './UserClientsModal';
 
 export default function UsersManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -67,8 +75,17 @@ export default function UsersManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingPriceUser, setEditingPriceUser] = useState<any>(null);
+  const [editingStatusUser, setEditingStatusUser] = useState<any>(null);
+  const [viewingClientsUser, setViewingClientsUser] = useState<any>(null);
+  const [adminToken, setAdminToken] = useState<string>('');
   const [newPrice, setNewPrice] = useState<string>('');
   const { toast } = useToast();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAdminToken(session?.access_token || 'ilash105046');
+    });
+  }, []);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -147,23 +164,44 @@ export default function UsersManagementPage() {
 
   const handleImpersonate = async (targetUser: any) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || 'ilash105046';
-
-      await createAdminLog(token, 'IMPERSONATE', targetUser.id, { email: targetUser.email });
-
-      localStorage.setItem('impersonate_user_id', targetUser.id);
-      localStorage.setItem('impersonate_user_email', targetUser.email || '');
+      if (!targetUser.email) throw new Error("Usuário não possui email");
       
+      const res = await generateImpersonationToken(adminToken, targetUser.email);
+      if (res.error || !res.data?.tokenHash) throw new Error(res.error || "Erro ao gerar token");
+
       toast({ 
-        title: "Impersonação iniciada", 
-        description: `Agora você está vendo o sistema como ${targetUser.email}` 
+        title: "Iniciando sessão real...", 
+        description: `Autenticando como ${targetUser.email}` 
       });
 
-      // Redireciona para o admin principal (que agora deve mostrar os dados do usuário alvo)
+      // Efetua o login real no client usando o hash do MagicLink
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        token_hash: res.data.tokenHash,
+        type: 'magiclink'
+      });
+
+      if (otpError) throw otpError;
+
+      await createAdminLog(adminToken, 'IMPERSONATE_REAL', targetUser.id, { email: targetUser.email });
+      
+      // Agora o supabase.auth.getUser() retornará o usuário real
       window.location.href = '/';
+    } catch (err: any) {
+      toast({ title: "Erro na impersonação", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleUpdateStatus = async (userId: string, newStatus: string) => {
+    try {
+      const res = await updateUserStatus(adminToken, userId, newStatus);
+      if (res.error) throw new Error(res.error);
+
+      await createAdminLog(adminToken, 'STATUS_UPDATE', userId, { newStatus });
+      toast({ title: "Status atualizado" });
+      setEditingStatusUser(null);
+      loadUsers();
     } catch (err) {
-      toast({ title: "Erro ao iniciar impersonação", variant: "destructive" });
+      toast({ title: "Erro ao atualizar status", variant: "destructive" });
     }
   };
 
@@ -307,12 +345,20 @@ export default function UsersManagementPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-56 bg-card border-border/40 rounded-2xl shadow-2xl p-2">
                           <DropdownMenuLabel className="text-[10px] font-black uppercase text-primary/40 px-2 py-1">Gerenciar</DropdownMenuLabel>
-                          <DropdownMenuItem 
+                           <DropdownMenuItem 
                             onClick={() => handleImpersonate(u)}
                             className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
                           >
                             <LogIn size={16} className="text-primary" /> Entrar como Usuário
                           </DropdownMenuItem>
+
+                          <DropdownMenuItem 
+                            onClick={() => setViewingClientsUser(u)}
+                            className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
+                          >
+                            <Users size={16} className="text-blue-500" /> Ver Clientes
+                          </DropdownMenuItem>
+
                           <DropdownMenuItem 
                             onClick={() => {
                               setEditingPriceUser(u);
@@ -322,8 +368,16 @@ export default function UsersManagementPage() {
                           >
                             <DollarSign size={16} className="text-green-500" /> Alterar Preço
                           </DropdownMenuItem>
+
+                          <DropdownMenuItem 
+                            onClick={() => setEditingStatusUser(u)}
+                            className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
+                          >
+                            <Clock size={16} className="text-orange-500" /> Alterar Tier (Trial/Ativo)
+                          </DropdownMenuItem>
+                          
                           <DropdownMenuItem className="rounded-xl flex gap-2 font-bold text-xs p-3">
-                            <Calendar size={16} className="text-blue-500" /> Detalhes da Assinatura
+                            <Calendar size={16} className="text-blue-400" /> Detalhes da Assinatura
                           </DropdownMenuItem>
                           
                           <DropdownMenuSeparator className="bg-border/40" />
@@ -331,7 +385,7 @@ export default function UsersManagementPage() {
                           <DropdownMenuLabel className="text-[10px] font-black uppercase text-primary/40 px-2 py-1">Permissões</DropdownMenuLabel>
                           <DropdownMenuItem 
                             onClick={() => handleUpdateRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
-                            className="rounded-xl flex gap-2 font-bold text-xs p-3"
+                            className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
                           >
                             <Shield size={16} className="text-orange-500" />
                             {u.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}
@@ -339,7 +393,7 @@ export default function UsersManagementPage() {
                           
                           <DropdownMenuSeparator className="bg-border/40" />
                           
-                          <DropdownMenuItem className="rounded-xl flex gap-2 font-bold text-xs p-3 text-destructive hover:text-destructive">
+                          <DropdownMenuItem className="rounded-xl flex gap-2 font-bold text-xs p-3 text-destructive hover:text-destructive cursor-pointer">
                             <UserMinus size={16} /> Excluir Conta
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -389,6 +443,51 @@ export default function UsersManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Tier Status Dialog */}
+      <Dialog open={!!editingStatusUser} onOpenChange={(open) => !open && setEditingStatusUser(null)}>
+        <DialogContent className="bg-card border-border/40 rounded-3xl sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-headline">Alterar Tier / Status</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground uppercase font-black">
+              Assinatura de {editingStatusUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+               <Button 
+                variant={editingStatusUser?.subscription_status === 'authorized' ? 'default' : 'outline'} 
+                className="rounded-xl"
+                onClick={() => handleUpdateStatus(editingStatusUser.id, 'authorized')}
+               >
+                 Ativo (Pagante)
+               </Button>
+               <Button 
+                variant={editingStatusUser?.subscription_status === 'trial' ? 'default' : 'outline'} 
+                className="rounded-xl"
+                onClick={() => handleUpdateStatus(editingStatusUser.id, 'trial')}
+               >
+                 Trial
+               </Button>
+               <Button 
+                variant={editingStatusUser?.subscription_status === 'unpaid' ? 'default' : 'outline'} 
+                className="rounded-xl text-destructive"
+                onClick={() => handleUpdateStatus(editingStatusUser.id, 'unpaid')}
+               >
+                 Inadimplente
+               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Clients Management Modal */}
+      <UserClientsModal 
+        isOpen={!!viewingClientsUser}
+        onClose={() => setViewingClientsUser(null)}
+        user={viewingClientsUser}
+        token={adminToken}
+      />
     </div>
   );
 }

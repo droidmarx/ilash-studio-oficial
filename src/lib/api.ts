@@ -421,17 +421,11 @@ export async function deleteRecipient(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function getClients(userId?: string): Promise<Client[]> {
-  let query = supabase
+export async function getClients(): Promise<Client[]> {
+  const { data, error } = await supabase
     .from('agendamentos')
     .select('*')
     .order('data', { ascending: true });
-
-  if (userId) {
-    query = query.eq('user_id', userId);
-  }
-
-  const { data, error } = await query;
   
   if (error) {
     console.error('Erro ao buscar clientes:', error);
@@ -456,18 +450,14 @@ export async function getClient(id: string): Promise<Client> {
   return mapToClient(data);
 }
 
-export async function createClient(data: Omit<Client, 'id'>, userId?: string): Promise<Client> {
-  const payload = mapToDb(data);
-  if (userId) {
-    payload.user_id = userId;
-  } else {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      payload.user_id = user.id;
-    } else {
-      throw new Error("Usuário não autenticado e userId não fornecido");
-    }
-  }
+export async function createClient(data: Omit<Client, 'id'>): Promise<Client> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Usuário não autenticado");
+
+  const payload = { 
+    ...mapToDb(data), 
+    user_id: user.id 
+  };
 
   const { data: inserted, error } = await supabase
     .from('agendamentos')

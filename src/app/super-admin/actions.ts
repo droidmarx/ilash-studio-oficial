@@ -172,6 +172,94 @@ export async function updateUserRole(token: string, userId: string, newRole: str
     }
 }
 
+export async function updateUserStatus(token: string, userId: string, newStatus: string) {
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
+
+        const { error } = await getSupabaseAdmin()
+            .from('perfis')
+            .update({ subscription_status: newStatus })
+            .eq('id', userId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        return { error: err.message };
+    }
+}
+
+export async function generateImpersonationToken(token: string, email: string) {
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
+
+        const admin = getSupabaseAdmin();
+        const { data, error } = await admin.auth.admin.generateLink({
+            type: 'magiclink',
+            email: email
+        });
+
+        if (error) throw error;
+        
+        // Retornamos apenas o token/hash necessário para o verifyOtp no client
+        // O link gerado é em formato: .../confirm?token_hash=...&type=magiclink
+        const url = new URL(data.properties.action_link);
+        const tokenHash = url.searchParams.get('token_hash');
+        
+        return { data: { tokenHash }, error: null };
+    } catch (err: any) {
+        return { error: err.message, data: null };
+    }
+}
+
+export async function fetchUserClients(token: string, targetUserId: string) {
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized', data: null };
+
+        const { data, error } = await getSupabaseAdmin()
+            .from('agendamentos')
+            .select('*')
+            .eq('user_id', targetUserId)
+            .order('data', { ascending: false });
+
+        if (error) throw error;
+        return { data: data || [], error: null };
+    } catch (err: any) {
+        return { error: err.message, data: null };
+    }
+}
+
+export async function updateSuperAdminClient(token: string, clientId: string, updates: any) {
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
+
+        const { error } = await getSupabaseAdmin()
+            .from('agendamentos')
+            .update(updates)
+            .eq('id', clientId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        return { error: err.message };
+    }
+}
+
+export async function deleteSuperAdminClient(token: string, clientId: string) {
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
+
+        const { error } = await getSupabaseAdmin()
+            .from('agendamentos')
+            .delete()
+            .eq('id', clientId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        return { error: err.message };
+    }
+}
+
 export async function createAdminLog(token: string, action: string, targetId: string, details: any = {}) {
     try {
         if (!await checkAdmin(token)) return;

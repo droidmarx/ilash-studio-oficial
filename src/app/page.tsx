@@ -24,7 +24,6 @@ import { EventModal } from "@/components/agenda/EventModal"
 import { SettingsModal } from "@/components/agenda/SettingsModal"
 import { AppointmentForm } from "@/components/agenda/AppointmentForm"
 import { AppointmentsList } from "@/components/agenda/AppointmentsList"
-import { RealtimeIndicator } from "@/components/agenda/RealtimeIndicator"
 import { ClientsManager } from "@/components/agenda/ClientsManager"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
@@ -67,8 +66,7 @@ import { OnboardingTutorial } from "@/components/onboarding/OnboardingTutorial"
 
 export default function AgendaPage() {
   const router = useRouter()
-  const { user, loading: authLoading, signOut, impersonatedUser } = useAuth()
-  const effectiveUserId = impersonatedUser?.id || user?.id;
+  const { user, signOut } = useAuth()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [isSetupOpen, setIsSetupOpen] = useState(false)
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)
@@ -86,7 +84,6 @@ export default function AgendaPage() {
     addAppointment,
     editAppointment,
     removeAppointment,
-    realtimeStatus,
   } = useAgenda()
 
   const [selectedDay, setSelectedDay] = useState<Date | null>(null)
@@ -133,7 +130,7 @@ export default function AgendaPage() {
       } else {
         setIsAuthorized(true)
         
-        getProfile(effectiveUserId).then(p => {
+        getProfile(user.id).then(p => {
           if (p) {
             setPerfil(p)
             
@@ -380,10 +377,6 @@ export default function AgendaPage() {
                  <p className="text-primary/70 text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase">
                    Professional Dashboard
                  </p>
-                 
-                 <div className="mt-2">
-                   <RealtimeIndicator status={realtimeStatus} />
-                 </div>
                  
                  {perfil && (
                    <div className="mt-6 flex justify-center md:justify-start">

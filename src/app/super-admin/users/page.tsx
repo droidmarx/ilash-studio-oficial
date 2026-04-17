@@ -168,25 +168,17 @@ export default function UsersManagementPage() {
       if (!targetUser.email) throw new Error("Usuário não possui email");
       
       const res = await generateImpersonationToken(adminToken, targetUser.email);
-      if (res.error || !res.data?.tokenHash) throw new Error(res.error || "Erro ao gerar token");
+      if (res.error || !res.data?.actionLink) throw new Error(res.error || "Erro ao gerar link");
 
       toast({ 
-        title: "Iniciando sessão real...", 
-        description: `Autenticando como ${targetUser.email}` 
+        title: "Redirecionando...", 
+        description: `Acessando conta de ${targetUser.email}` 
       });
 
-      // Efetua o login real no client usando o hash do MagicLink
-      const { error: otpError } = await supabase.auth.verifyOtp({
-        token_hash: res.data.tokenHash,
-        type: 'magiclink'
-      });
-
-      if (otpError) throw otpError;
-
-      await createAdminLog(adminToken, 'IMPERSONATE_REAL', targetUser.id, { email: targetUser.email });
+      await createAdminLog(adminToken, 'IMPERSONATE_REDIRECT', targetUser.id, { email: targetUser.email });
       
-      // Agora o supabase.auth.getUser() retornará o usuário real
-      window.location.href = '/';
+      // Oferece o redirecionamento direto - forma mais estável para links admin
+      window.location.href = res.data.actionLink;
     } catch (err: any) {
       toast({ title: "Erro na impersonação", description: err.message, variant: "destructive" });
     }

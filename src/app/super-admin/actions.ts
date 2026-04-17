@@ -200,12 +200,8 @@ export async function generateImpersonationToken(token: string, email: string) {
 
         if (error) throw error;
         
-        // Retornamos apenas o token/hash necessário para o verifyOtp no client
-        // O link gerado é em formato: .../confirm?token_hash=...&type=magiclink
-        const url = new URL(data.properties.action_link);
-        const tokenHash = url.searchParams.get('token_hash');
-        
-        return { data: { tokenHash }, error: null };
+        // Retornamos o link completo para redirecionamento direto no client
+        return { data: { actionLink: data.properties.action_link }, error: null };
     } catch (err: any) {
         return { error: err.message, data: null };
     }

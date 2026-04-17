@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   ExternalLink,
   RefreshCcw,
-  DollarSign
+  DollarSign,
+  Users
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {

@@ -69,7 +69,7 @@ export async function sendTelegramNotification({
 
   const info = depois || cliente;
   message += `👤 <b>Cliente:</b> ${info.nome}\n`;
-  message += `📌 <b>Status:</b> ${info.confirmado ? 'Confirmado' : 'Pendente'}\n`;
+  message += `📌 <b>Status:</b> ${info.confirmado ? '✅ Confirmado' : '⏳ Pendente'}\n`;
   message += `📅 <b>Data/Hora:</b> ${formatDateTime(info.data)}\n`;
   message += `🎨 <b>Serviço:</b> ${info.servico}\n`;
   message += `🔸 <b>Tipo:</b> ${info.tipo}\n`;

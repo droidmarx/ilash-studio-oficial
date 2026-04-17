@@ -194,16 +194,6 @@ export function useAgenda() {
       }
 
       toast({ title: "Sucesso", description: "Atualizado!" });
-      if (oldData) {
-        const type = (data.confirmado === true && oldData.confirmado !== true) ? 'Confirmado' : 'Alterado';
-        await sendTelegramNotification({
-          tipo: type,
-          cliente: updated,
-          antes: oldData,
-          depois: updated,
-          userId: user?.id
-        });
-      }
       await fetchClients(false);
     } catch (error) {
       toast({ variant: "destructive", title: "Erro", description: "Falha ao atualizar." });

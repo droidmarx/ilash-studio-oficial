@@ -66,7 +66,7 @@ import { OnboardingTutorial } from "@/components/onboarding/OnboardingTutorial"
 
 export default function AgendaPage() {
   const router = useRouter()
-  const { user, signOut } = useAuth()
+  const { user, loading: authLoading, signOut } = useAuth()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [isSetupOpen, setIsSetupOpen] = useState(false)
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false)

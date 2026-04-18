@@ -319,16 +319,18 @@ export default function UsersManagementPage() {
                 <TableRow className="border-border/40 hover:bg-transparent">
                   <TableHead className="text-[10px] font-black uppercase text-primary/40 px-6 py-4">Usuário / Estúdio</TableHead>
                   <TableHead className="text-[10px] font-black uppercase text-primary/40">Status</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Role</TableHead>
                   <TableHead className="text-[10px] font-black uppercase text-primary/40">Clientes</TableHead>
                   <TableHead className="text-[10px] font-black uppercase text-primary/40">Plano / Preço</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Vencimento / Cadastro</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Vencimento</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Cadastro</TableHead>
                   <TableHead className="text-right text-[10px] font-black uppercase text-primary/40 px-6">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {!(users || []).length ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-40 text-center text-muted-foreground italic">Nenhum usuário encontrado.</TableCell>
+                    <TableCell colSpan={8} className="h-40 text-center text-muted-foreground italic">Nenhum usuário encontrado.</TableCell>
                   </TableRow>
                 ) : (
                   (users || []).map((u) => (
@@ -351,11 +353,19 @@ export default function UsersManagementPage() {
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                             <Mail size={10} /> {u.email}
                           </p>
+                          <a href={`/s/${u.slug}`} target="_blank" className="text-[10px] text-primary hover:underline flex items-center gap-1 mt-0.5 font-bold">
+                            <ExternalLink size={10} /> /{u.slug}
+                          </a>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(u.subscription_status)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize text-[10px] font-bold border-primary/20 bg-primary/5">
+                        <Shield size={10} className="mr-1 text-orange-500" /> {u.role === 'super_admin' ? 'Super Admin' : u.role}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                        <div className="flex items-center gap-2">
@@ -366,21 +376,21 @@ export default function UsersManagementPage() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-foreground">{u.plan || 'Premium'}</span>
-                        <span className="text-[10px] text-primary font-mono">
+                        <span className="text-[10px] text-primary font-mono font-bold">
                           R$ {Number(u.custom_price || 14.99).toFixed(2).replace('.', ',')}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-[10px] font-mono text-muted-foreground">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-primary font-bold">
+                    <TableCell>
+                       <div className="flex items-center gap-1 text-primary font-bold text-[10px] font-mono">
                           <CalendarDays size={10} />
-                          Venc: {u.subscription_current_period_end || u.trial_end ? format(new Date(u.subscription_current_period_end || u.trial_end), 'dd/MM/yy', { locale: ptBR }) : '--/--/--'}
-                        </div>
-                        <div className="flex items-center gap-1 opacity-60">
-                          <Calendar size={10} />
-                          Cad: {u.created_at ? format(new Date(u.created_at), 'dd/MM/yy', { locale: ptBR }) : '--/--/--'}
-                        </div>
+                          {u.subscription_current_period_end || u.trial_end ? format(new Date(u.subscription_current_period_end || u.trial_end), 'dd/MM/yy', { locale: ptBR }) : '--/--/--'}
+                       </div>
+                    </TableCell>
+                    <TableCell className="text-[10px] font-mono text-muted-foreground whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <Calendar size={10} />
+                        {u.created_at ? format(new Date(u.created_at), 'dd/MM/yy', { locale: ptBR }) : '--/--/--'}
                       </div>
                     </TableCell>
                     <TableCell className="text-right px-6">

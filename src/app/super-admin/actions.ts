@@ -95,9 +95,9 @@ export async function fetchAllUsers(token: string, searchTerm: string = '', stat
         if (!await checkAdmin(token)) return { error: 'Unauthorized', data: null };
 
         const admin = getSupabaseAdmin();
-        const selectFields = 'id, email, nome_exibicao, slug, subscription_status, trial_end, role, plan, custom_price, onboarding_completed, created_at';
+        // Incluindo avatar_url e o campo de renovação/vencimento
+        const selectFields = 'id, email, nome_exibicao, avatar_url, slug, subscription_status, trial_end, subscription_current_period_end, role, plan, custom_price, onboarding_completed, created_at';
         
-        // Tenta a busca completa
         let query = admin
             .from('perfis')
             .select(selectFields)
@@ -111,29 +111,27 @@ export async function fetchAllUsers(token: string, searchTerm: string = '', stat
             query = query.eq('subscription_status', statusFilter);
         }
 
-        const { data, error } = await query;
+        const { data: profiles, error } = await query;
         
         if (error) {
-            console.warn('Busca completa de usuários falhou (provavelmente colunas ausentes):', error.message);
-            
-            // Fallback para colunas básicas que garantidamente existem
-            const fallbackFields = 'id, email, nome_exibicao, role, created_at';
-            let fallbackQuery = admin
-                .from('perfis')
-                .select(fallbackFields)
-                .order('created_at', { ascending: false });
-            
-            if (searchTerm) {
-                fallbackQuery = fallbackQuery.or(`email.ilike.%${searchTerm}%,nome_exibicao.ilike.%${searchTerm}%`);
-            }
-            
-            const { data: fbData, error: fbError } = await fallbackQuery;
+            console.warn('Busca completa de usuários falhou:', error.message);
+            // Fallback (mantido para resiliência)
+            const { data: fbData, error: fbError } = await admin.from('perfis').select('id, email, nome_exibicao, role, created_at');
             if (fbError) throw fbError;
-            
-            return { data: fbData || [], error: null, warning: 'Versão simplificada dos dados (algumas colunas não encontradas).' };
+            return { data: fbData || [], error: null };
         }
+
+        // 📊 Busca contagem de agendamentos em paralelo para cada usuário retornado
+        const usersWithStats = await Promise.all((profiles || []).map(async (u) => {
+            const { count } = await admin
+                .from('agendamentos')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', u.id);
+            
+            return { ...u, clientCount: count || 0 };
+        }));
         
-        return { data: data || [], error: null };
+        return { data: usersWithStats, error: null };
     } catch (err: any) {
         console.error('Erro fatal em fetchAllUsers:', err);
         return { error: err.message, data: null };
@@ -179,6 +177,27 @@ export async function updateUserStatus(token: string, userId: string, newStatus:
         const { error } = await getSupabaseAdmin()
             .from('perfis')
             .update({ subscription_status: newStatus })
+            .eq('id', userId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (err: any) {
+        return { error: err.message };
+    }
+}
+
+export async function updateUserExpiry(token: string, userId: string, newDate: string) {
+    try {
+        if (!await checkAdmin(token)) return { error: 'Unauthorized' };
+
+        // Atualizamos o trial_end como prioridade de controle manual
+        const { error } = await getSupabaseAdmin()
+            .from('perfis')
+            .update({ 
+                trial_end: newDate,
+                // Se for pagante, podemos atualizar o período também se desejado, 
+                // mas trial_end é o campo de controle manual mais comum aqui
+            })
             .eq('id', userId);
 
         if (error) throw error;

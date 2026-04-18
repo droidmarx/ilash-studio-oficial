@@ -18,7 +18,9 @@ import {
   ExternalLink,
   RefreshCcw,
   DollarSign,
-  Users
+  Users,
+  Avatar,
+  CalendarDays
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -61,7 +63,8 @@ import {
   createAdminLog, 
   updateUserPrice, 
   generateImpersonationToken, 
-  updateUserStatus 
+  updateUserStatus,
+  updateUserExpiry
 } from '../actions';
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
@@ -77,9 +80,11 @@ export default function UsersManagementPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingPriceUser, setEditingPriceUser] = useState<any>(null);
   const [editingStatusUser, setEditingStatusUser] = useState<any>(null);
+  const [editingExpiryUser, setEditingExpiryUser] = useState<any>(null);
   const [viewingClientsUser, setViewingClientsUser] = useState<any>(null);
   const [adminToken, setAdminToken] = useState<string>('');
   const [newPrice, setNewPrice] = useState<string>('');
+  const [newExpiryDate, setNewExpiryDate] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -124,7 +129,7 @@ export default function UsersManagementPage() {
   // ✅ REDE DE SEGURANÇA (Safety Net): 
   // Força a restauração da interatividade do body se o Radix travar após fechar modais.
   useEffect(() => {
-    if (!viewingClientsUser && !editingPriceUser && !editingStatusUser) {
+    if (!viewingClientsUser && !editingPriceUser && !editingStatusUser && !editingExpiryUser) {
       const timer = setTimeout(() => {
         // Remove travas de scroll e ponteiro que o Radix pode deixar pra trás
         document.body.style.pointerEvents = 'auto';
@@ -136,7 +141,7 @@ export default function UsersManagementPage() {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [viewingClientsUser, editingPriceUser, editingStatusUser]);
+  }, [viewingClientsUser, editingPriceUser, editingStatusUser, editingExpiryUser]);
 
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
@@ -220,6 +225,21 @@ export default function UsersManagementPage() {
     }
   };
 
+  const handleUpdateExpiry = async () => {
+    if (!editingExpiryUser) return;
+    try {
+      const res = await updateUserExpiry(adminToken, editingExpiryUser.id, newExpiryDate);
+      if (res.error) throw new Error(res.error);
+
+      await createAdminLog(adminToken, 'EXPIRY_UPDATE', editingExpiryUser.id, { newExpiry: newExpiryDate });
+      toast({ title: "Vencimento atualizado" });
+      setEditingExpiryUser(null);
+      loadUsers(true);
+    } catch (err) {
+      toast({ title: "Erro ao atualizar vencimento", variant: "destructive" });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'authorized':
@@ -299,9 +319,9 @@ export default function UsersManagementPage() {
                 <TableRow className="border-border/40 hover:bg-transparent">
                   <TableHead className="text-[10px] font-black uppercase text-primary/40 px-6 py-4">Usuário / Estúdio</TableHead>
                   <TableHead className="text-[10px] font-black uppercase text-primary/40">Status</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Role</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Clientes</TableHead>
                   <TableHead className="text-[10px] font-black uppercase text-primary/40">Plano / Preço</TableHead>
-                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Cadastro</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase text-primary/40">Vencimento / Cadastro</TableHead>
                   <TableHead className="text-right text-[10px] font-black uppercase text-primary/40 px-6">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -315,17 +335,22 @@ export default function UsersManagementPage() {
                     <TableRow key={u.id} className="border-border/40 hover:bg-primary/5 transition-colors group">
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gold-gradient flex items-center justify-center font-bold text-primary-foreground shadow-sm">
-                          {(u.nome_exibicao || u.email || '?')[0].toUpperCase()}
-                        </div>
+                        {u.avatar_url ? (
+                          <img 
+                            src={u.avatar_url} 
+                            alt={u.nome_exibicao} 
+                            className="w-10 h-10 rounded-xl object-cover border border-primary/20 shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-gold-gradient flex items-center justify-center font-bold text-primary-foreground shadow-sm">
+                            {(u.nome_exibicao || u.email || '?')[0].toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <p className="font-bold text-sm text-foreground">{u.nome_exibicao || 'Meu Studio'}</p>
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                             <Mail size={10} /> {u.email}
                           </p>
-                          <a href={`/s/${u.slug}`} target="_blank" className="text-[10px] text-primary hover:underline flex items-center gap-1 mt-0.5">
-                            <ExternalLink size={10} /> /{u.slug}
-                          </a>
                         </div>
                       </div>
                     </TableCell>
@@ -333,22 +358,29 @@ export default function UsersManagementPage() {
                       {getStatusBadge(u.subscription_status)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="capitalize text-[10px] font-bold border-primary/20 bg-primary/5">
-                        <Shield size={10} className="mr-1" /> {u.role === 'super_admin' ? 'Super Admin' : u.role}
-                      </Badge>
+                       <div className="flex items-center gap-2">
+                        <Users size={14} className="text-primary/40" />
+                        <span className="font-bold text-sm">{u.clientCount || 0}</span>
+                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-foreground">{u.plan || 'Premium'}</span>
                         <span className="text-[10px] text-primary font-mono">
-                          R$ {Number(u.custom_price || 9.99).toFixed(2).replace('.', ',')}
+                          R$ {Number(u.custom_price || 14.99).toFixed(2).replace('.', ',')}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className="text-[10px] font-mono text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar size={10} />
-                        {u.created_at ? format(new Date(u.created_at), 'dd/MM/yy', { locale: ptBR }) : '--/--/--'}
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-primary font-bold">
+                          <CalendarDays size={10} />
+                          Venc: {u.subscription_current_period_end || u.trial_end ? format(new Date(u.subscription_current_period_end || u.trial_end), 'dd/MM/yy', { locale: ptBR }) : '--/--/--'}
+                        </div>
+                        <div className="flex items-center gap-1 opacity-60">
+                          <Calendar size={10} />
+                          Cad: {u.created_at ? format(new Date(u.created_at), 'dd/MM/yy', { locale: ptBR }) : '--/--/--'}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-right px-6">
@@ -402,6 +434,19 @@ export default function UsersManagementPage() {
                             className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
                           >
                             <Clock size={16} className="text-orange-500" /> Alterar Tier (Trial/Ativo)
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem 
+                            onSelect={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setTimeout(() => {
+                                setEditingExpiryUser(u);
+                                setNewExpiryDate(u.trial_end || u.subscription_current_period_end || new Date().toISOString().split('T')[0]);
+                              }, 100);
+                            }}
+                            className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
+                          >
+                            <CalendarDays size={16} className="text-purple-500" /> Alterar Vencimento
                           </DropdownMenuItem>
                           
                           <DropdownMenuItem className="rounded-xl flex gap-2 font-bold text-xs p-3">
@@ -516,6 +561,38 @@ export default function UsersManagementPage() {
         user={viewingClientsUser}
         token={adminToken}
       />
+
+      {/* Edit Expiry Dialog */}
+      <Dialog open={!!editingExpiryUser} onOpenChange={(open) => !open && setEditingExpiryUser(null)}>
+        <DialogContent className="bg-card border-border/40 rounded-3xl sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-headline">Ajustar Vencimento</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground uppercase font-black">
+              Defina a data limite de acesso para {editingExpiryUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase text-primary/40 px-1">Nova Data</label>
+              <Input 
+                type="date"
+                className="h-12 bg-background border-border/40 rounded-2xl font-bold"
+                value={newExpiryDate ? new Date(newExpiryDate).toISOString().split('T')[0] : ''}
+                onChange={(e) => setNewExpiryDate(e.target.value)}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground bg-primary/5 p-4 rounded-2xl italic leading-relaxed">
+              Esta alteração afetará o campo de expiração manual (Trial End). Se o usuário for um pagante ativo, o Mercado Pago continuará tentando cobrar na data original do ciclo dele.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setEditingExpiryUser(null)} className="rounded-xl font-bold">Cancelar</Button>
+            <Button onClick={handleUpdateExpiry} className="bg-gold-gradient text-primary-foreground rounded-xl font-bold px-8 shadow-lg shadow-primary/20">
+              Salvar Vencimento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

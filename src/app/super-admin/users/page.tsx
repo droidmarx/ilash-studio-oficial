@@ -466,9 +466,13 @@ export default function UsersManagementPage() {
                           <DropdownMenuSeparator className="bg-border/40" />
                           
                           <DropdownMenuLabel className="text-[10px] font-black uppercase text-primary/40 px-2 py-1">Permissões</DropdownMenuLabel>
-                          <DropdownMenuItem 
-                            onClick={() => handleUpdateRole(u.id, u.role === 'admin' ? 'user' : 'admin')}
-                            className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
+                           <DropdownMenuItem 
+                            onClick={() => {
+                              if (u.email === 'droidmarx@gmail.com') return;
+                              handleUpdateRole(u.id, u.role === 'admin' ? 'user' : 'admin');
+                            }}
+                            disabled={u.email === 'droidmarx@gmail.com' && u.role === 'admin'}
+                            className={`rounded-xl flex gap-2 font-bold text-xs p-3 ${u.email === 'droidmarx@gmail.com' && u.role === 'admin' ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                           >
                             <Shield size={16} className="text-orange-500" />
                             {u.role === 'admin' ? 'Remover Admin' : 'Tornar Admin'}

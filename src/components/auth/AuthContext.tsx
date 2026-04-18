@@ -47,6 +47,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Limpa qualquer resquício de impersonação antiga se houver
     localStorage.removeItem('impersonate_user_id');
     localStorage.removeItem('impersonate_user_email');
+    localStorage.removeItem('is_impersonating');
+    localStorage.removeItem('impersonated_email');
     await supabase.auth.signOut()
     setSession(null)
     setUser(null)

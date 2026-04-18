@@ -88,8 +88,8 @@ export default function UsersManagementPage() {
     });
   }, []);
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
+  const loadUsers = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(false);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -177,6 +177,10 @@ export default function UsersManagementPage() {
 
       await createAdminLog(adminToken, 'IMPERSONATE_REDIRECT', targetUser.id, { email: targetUser.email });
       
+      // Salva sinalizadores para o banner de impersonação
+      localStorage.setItem('is_impersonating', 'true');
+      localStorage.setItem('impersonated_email', targetUser.email);
+
       // Oferece o redirecionamento direto - forma mais estável para links admin
       window.location.href = res.data.actionLink;
     } catch (err: any) {
@@ -192,7 +196,8 @@ export default function UsersManagementPage() {
       await createAdminLog(adminToken, 'STATUS_UPDATE', userId, { newStatus });
       toast({ title: "Status atualizado" });
       setEditingStatusUser(null);
-      loadUsers();
+      // ✅ Silent refresh: evita congelamento ao prevenir unmount do skeleton
+      loadUsers(true);
     } catch (err) {
       toast({ title: "Erro ao atualizar status", variant: "destructive" });
     }

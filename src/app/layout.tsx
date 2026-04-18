@@ -27,6 +27,7 @@ export const viewport: Viewport = {
 import { AuthProvider } from '@/components/auth/AuthContext';
 import { SubscriptionGuard } from '@/components/auth/SubscriptionGuard';
 import { Toaster } from '@/components/ui/toaster';
+import { ImpersonationBanner } from '@/components/auth/ImpersonationBanner';
 
 export default function RootLayout({
   children,
@@ -83,6 +84,7 @@ export default function RootLayout({
             ))}
           </div>
           <SubscriptionGuard>
+            <ImpersonationBanner />
             {children}
           </SubscriptionGuard>
           <Toaster />

@@ -121,6 +121,23 @@ export default function UsersManagementPage() {
     return () => clearTimeout(timer);
   }, [loadUsers]);
 
+  // ✅ REDE DE SEGURANÇA (Safety Net): 
+  // Força a restauração da interatividade do body se o Radix travar após fechar modais.
+  useEffect(() => {
+    if (!viewingClientsUser && !editingPriceUser && !editingStatusUser) {
+      const timer = setTimeout(() => {
+        // Remove travas de scroll e ponteiro que o Radix pode deixar pra trás
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.overflow = 'auto';
+        
+        // Remove aria-hidden residual se houver no container principal
+        const main = document.querySelector('main');
+        if (main) main.removeAttribute('aria-hidden');
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [viewingClientsUser, editingPriceUser, editingStatusUser]);
+
   const handleUpdateRole = async (userId: string, newRole: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();

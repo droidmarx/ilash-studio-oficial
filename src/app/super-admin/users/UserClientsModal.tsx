@@ -68,6 +68,18 @@ export function UserClientsModal({ user, isOpen, onClose, token }: UserClientsMo
     }
   }, [isOpen, user, loadClients]);
 
+  // ✅ REDE DE SEGURANÇA (Safety Net): 
+  // Garante que o body volte a ser clicável se o diálogo fechar incorretamente.
+  useEffect(() => {
+    if (!isOpen) {
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.overflow = 'auto';
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   const handleEdit = (client: any) => {
     setEditingId(client.id);
     setEditValues(client);

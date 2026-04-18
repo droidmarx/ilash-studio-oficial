@@ -68,9 +68,6 @@ function ThemeToggle({ theme, toggleTheme }: ThemeToggleProps) {
   )
 }
 
-  )
-}
-
 function ChatBubble({ 
   type, 
   content, 

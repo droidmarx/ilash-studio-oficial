@@ -95,8 +95,8 @@ export async function fetchAllUsers(token: string, searchTerm: string = '', stat
         if (!await checkAdmin(token)) return { error: 'Unauthorized', data: null };
 
         const admin = getSupabaseAdmin();
-        // Incluindo avatar_url e o campo de renovação/vencimento
-        const selectFields = 'id, email, nome_exibicao, avatar_url, slug, subscription_status, trial_end, subscription_current_period_end, role, plan, custom_price, onboarding_completed, created_at';
+        // Tentamos buscar o máximo de campos úteis. avatar_url pode não existir em algumas versões.
+        const selectFields = 'id, email, nome_exibicao, slug, subscription_status, trial_end, subscription_current_period_end, role, plan, custom_price, created_at';
         
         let query = admin
             .from('perfis')
@@ -112,17 +112,22 @@ export async function fetchAllUsers(token: string, searchTerm: string = '', stat
         }
 
         const { data: profiles, error } = await query;
+        let finalProfiles = profiles || [];
         
         if (error) {
-            console.warn('Busca completa de usuários falhou:', error.message);
-            // Fallback (mantido para resiliência)
-            const { data: fbData, error: fbError } = await admin.from('perfis').select('id, email, nome_exibicao, role, created_at');
+            console.warn('Busca completa de usuários falhou, tentando fallback seguro:', error.message);
+            // Fallback robusto: busca campos garantidos que sustentam a UI básica
+            const { data: fbData, error: fbError } = await admin
+                .from('perfis')
+                .select('id, email, nome_exibicao, slug, subscription_status, role, created_at')
+                .order('created_at', { ascending: false });
+                
             if (fbError) throw fbError;
-            return { data: fbData || [], error: null };
+            finalProfiles = fbData || [];
         }
 
-        // 📊 Busca contagem de agendamentos em paralelo para cada usuário retornado
-        const usersWithStats = await Promise.all((profiles || []).map(async (u) => {
+        // 📊 Busca contagem de agendamentos para TODOS os perfis encontrados
+        const usersWithStats = await Promise.all(finalProfiles.map(async (u) => {
             const { count } = await admin
                 .from('agendamentos')
                 .select('*', { count: 'exact', head: true })

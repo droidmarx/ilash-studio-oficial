@@ -68,6 +68,83 @@ function ThemeToggle({ theme, toggleTheme }: ThemeToggleProps) {
   )
 }
 
+  )
+}
+
+function ChatBubble({ 
+  type, 
+  content, 
+  title, 
+  active, 
+  onToggle 
+}: { 
+  type: 'whatsapp' | 'telegram', 
+  content: string, 
+  title: string, 
+  active?: boolean, 
+  onToggle?: (val: boolean) => void 
+}) {
+  const isWhatsapp = type === 'whatsapp'
+  
+  // Converte formatação básica de markdown/HTML para o preview
+  const formatContent = (text: string) => {
+    return text
+      .split('\n')
+      .map((line, i) => (
+        <span key={i}>
+          {line.split(/(\*.*?\*|<b>.*?<\/b>)/g).map((part, j) => {
+            if (part.startsWith('*') && part.endsWith('*')) {
+              return <strong key={j}>{part.slice(1, -1)}</strong>
+            }
+            if (part.startsWith('<b>') && part.endsWith('</b>')) {
+              return <strong key={j}>{part.slice(3, -4)}</strong>
+            }
+            return part
+          })}
+          <br />
+        </span>
+      ))
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between px-1">
+        <Label className="text-[11px] font-black uppercase tracking-wider text-primary/70 flex items-center gap-2">
+          {isWhatsapp ? <MessageCircle size={14} className="text-green-500" /> : <Bot size={14} className="text-blue-400" />}
+          {title}
+        </Label>
+        {onToggle !== undefined && (
+          <Switch checked={active} onCheckedChange={onToggle} />
+        )}
+      </div>
+      
+      <div className={cn(
+        "relative p-4 rounded-2xl text-[11px] md:text-xs shadow-sm border max-w-[90%] md:max-w-[85%]",
+        isWhatsapp 
+          ? "bg-[#D9FDD3] border-[#BEE6B2] text-[#111B21] ml-0 rounded-tl-none mr-auto" 
+          : "bg-[#EFF6FF] border-[#DBEAFE] text-[#1E293B] ml-auto rounded-tr-none mr-0"
+      )}>
+        {/* Triângulo lateral da bolha */}
+        <div className={cn(
+          "absolute top-0 w-3 h-3",
+          isWhatsapp 
+            ? "left-[-8px] border-t-[8px] border-t-[#D9FDD3] border-l-[8px] border-l-transparent" 
+            : "right-[-8px] border-t-[8px] border-t-[#EFF6FF] border-r-[8px] border-r-transparent"
+        )} />
+        
+        <div className="leading-relaxed font-sans whitespace-pre-wrap">
+          {formatContent(content)}
+        </div>
+        
+        <div className="mt-1 flex justify-end items-center gap-1 opacity-40 text-[9px]">
+          <span>{new Date().getHours()}:{new Date().getMinutes().toString().padStart(2, '0')}</span>
+          {isWhatsapp && <Check size={10} className="text-blue-500" />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
@@ -420,32 +497,75 @@ export function SettingsModal({
 
           </TabsContent>
 
-          <TabsContent value="mensagens" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">
-            <div className="space-y-6">
-              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="font-bold flex items-center gap-2"><Send size={18} className="text-green-500" /> WhatsApp (Lembrete Personalizado)</Label>
-                  <Button variant="ghost" size="sm" onClick={() => setCustomMessages({...customMessages, whatsappReminder: defaultCustomMessages.whatsappReminder})} className="text-[10px] h-6 px-2 text-primary/60 hover:text-primary"><RefreshCw size={12} className="mr-1" /> Restaurar Padrão</Button>
+          <TabsContent value="mensagens" className="space-y-8 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300 py-2">
+            <div className="space-y-8">
+              {/* Seção WhatsApp */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-border/40">
+                  <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <MessageCircle className="text-green-500" size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold">Lembretes WhatsApp</h4>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black opacity-50">Manual via Botão na Agenda</p>
+                  </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground flex flex-wrap gap-1 leading-relaxed">Variáveis: <span className="font-mono bg-background px-1 rounded">{"{{cliente}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{tipo}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{dia_semana}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{data}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{hora}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{tecnica}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{valor_base}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{valor_total}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{adicionais}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{link_anamnese}}"}</span></p>
-                <Textarea 
-                  value={customMessages.whatsappReminder} 
-                  onChange={(e) => setCustomMessages({...customMessages, whatsappReminder: e.target.value})} 
-                  className="rounded-xl bg-background min-h-[150px] font-mono text-[10px] md:text-xs" 
+
+                <ChatBubble 
+                  type="whatsapp"
+                  title="Modelo de Lembrete"
+                  content={customMessages.whatsappReminder
+                    .replace(/{{cliente}}/g, "Maria Silva")
+                    .replace(/{{tipo}}/g, "Aplicação")
+                    .replace(/{{dia_semana}}/g, "Segunda-feira")
+                    .replace(/{{data}}/g, "24/04")
+                    .replace(/{{hora}}/g, "14:00")
+                    .replace(/{{tecnica}}/g, "Brasileiro")
+                    .replace(/{{valor_base}}/g, "120,00")
+                    .replace(/{{valor_total}}/g, "150,00")
+                    .replace(/{{adicionais}}/g, " (Cílios Inferiores)")
+                    .replace(/{{link_anamnese}}/g, "\n\n📋 Preencha sua ficha aqui: preview.link")
+                  }
                 />
+                
+                <div className="bg-primary/5 p-4 rounded-2xl text-[10px] text-muted-foreground italic leading-relaxed">
+                  💡 Este conteúdo é enviado manualmente quando você clica no ícone de WhatsApp ao lado de um agendamento.
+                </div>
               </div>
 
-              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="font-bold flex items-center gap-2"><Bot size={18} className="text-blue-500" /> Telegram (Lembretes Automáticos)</Label>
-                  <Button variant="ghost" size="sm" onClick={() => setCustomMessages({...customMessages, telegramReminder: defaultCustomMessages.telegramReminder})} className="text-[10px] h-6 px-2 text-primary/60 hover:text-primary"><RefreshCw size={12} className="mr-1" /> Restaurar Padrão</Button>
+              {/* Seção Telegram */}
+              <div className="space-y-6 pt-4 border-t border-border/40">
+                <div className="flex items-center gap-2 pb-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <Bot className="text-blue-500" size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold">Automações Telegram</h4>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black opacity-50">Notificações Automáticas para Você</p>
+                  </div>
                 </div>
-                <p className="text-[10px] text-muted-foreground flex flex-wrap gap-1 leading-relaxed">Variáveis: <span className="font-mono bg-background px-1 rounded">{"{{cliente}}"}</span> <span className="font-mono bg-background px-1 rounded">{"{{hora}}"}</span></p>
-                <Textarea 
-                  value={customMessages.telegramReminder} 
-                  onChange={(e) => setCustomMessages({...customMessages, telegramReminder: e.target.value})} 
-                  className="rounded-xl bg-background min-h-[80px] font-mono text-[10px] md:text-xs" 
-                />
+
+                <div className="space-y-8">
+                  <ChatBubble 
+                    type="telegram"
+                    title="Sumário Diário (08:00)"
+                    active={telegramConfig.dailySummary}
+                    onToggle={(v) => setTelegramConfig({...telegramConfig, dailySummary: v})}
+                    content={`✨ <b>Bom dia! Agenda de Hoje</b> ✨\n\n✅ (Confirmado)\n⏰ 09:00 - Ana Souza\n🎨 Brasileiro\n\n⏳ (Pendente)\n⏰ 11:30 - Julia Lima\n🎨 Egípcio\n\n🚀 Tenha um ótimo dia de trabalho!`}
+                  />
+
+                  <ChatBubble 
+                    type="telegram"
+                    title="Lembrete Antecipado (2h)"
+                    active={telegramConfig.reminder2h}
+                    onToggle={(v) => setTelegramConfig({...telegramConfig, reminder2h: v})}
+                    content={customMessages.telegramReminder
+                      .replace(/{{cliente}}/g, "Fernanda Oliveira")
+                      .replace(/{{hora}}/g, "16:30")
+                      .replace(/{{servico}}/g, "Manutenção 4D")
+                    }
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>

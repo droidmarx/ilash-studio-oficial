@@ -351,16 +351,24 @@ export default function UsersManagementPage() {
                           </DropdownMenuItem>
 
                           <DropdownMenuItem 
-                            onClick={() => setViewingClientsUser(u)}
+                            onSelect={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setTimeout(() => {
+                                setViewingClientsUser(u);
+                              }, 100);
+                            }}
                             className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
                           >
                             <Users size={16} className="text-blue-500" /> Ver Clientes
                           </DropdownMenuItem>
 
                           <DropdownMenuItem 
+                            onSelect={(e) => e.preventDefault()}
                             onClick={() => {
-                              setEditingPriceUser(u);
-                              setNewPrice(String(u.custom_price || 9.99));
+                              setTimeout(() => {
+                                setEditingPriceUser(u);
+                                setNewPrice(String(u.custom_price || 9.99));
+                              }, 100);
                             }}
                             className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
                           >
@@ -368,7 +376,12 @@ export default function UsersManagementPage() {
                           </DropdownMenuItem>
 
                           <DropdownMenuItem 
-                            onClick={() => setEditingStatusUser(u)}
+                            onSelect={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setTimeout(() => {
+                                setEditingStatusUser(u);
+                              }, 100);
+                            }}
                             className="rounded-xl flex gap-2 font-bold text-xs p-3 cursor-pointer"
                           >
                             <Clock size={16} className="text-orange-500" /> Alterar Tier (Trial/Ativo)

@@ -490,6 +490,23 @@ export function SettingsModal({
                   </div>
                 ))}
               </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Configurações de Horário</Label>
+                </div>
+                <div className="bg-muted/30 p-4 rounded-2xl border border-border flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-bold uppercase">Horário do Resumo Diário</Label>
+                    <p className="text-[9px] text-muted-foreground italic">Quando você receberá a agenda do dia</p>
+                  </div>
+                  <Input 
+                    type="time" 
+                    value={telegramConfig.summaryTime || "08:00"} 
+                    onChange={(e) => setTelegramConfig({...telegramConfig, summaryTime: e.target.value})}
+                    className="w-24 h-9 bg-background rounded-xl text-center font-bold"
+                  />
+                </div>
+              </div>
             </div>
 
           </TabsContent>

@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
     const nowBrasilia = toZonedTime(new Date(), timeZone);
     const todayStr = format(nowBrasilia, 'yyyy-MM-dd');
-    const currentHour = nowBrasilia.getHours();
+    const currentTimeStr = format(nowBrasilia, 'HH:mm');
 
     for (const userId in configsByUser) {
       const userConfigs = configsByUser[userId];
@@ -70,9 +70,13 @@ export async function GET(request: Request) {
       const telegramConfig = rawTelegramConfig ? JSON.parse(rawTelegramConfig) : defaultTelegramSettings;
       const userClients = allClients.filter(c => (c as any).user_id === userId);
 
-      if (telegramConfig.dailySummary && currentHour === 8) {
+      // Lógica de Resumo Diário
+      if (telegramConfig.dailySummary) {
+        const scheduledTime = telegramConfig.summaryTime || "08:00";
         const lastSentDate = userConfigs.find((r: any) => r.nome === 'SUMMARY_STATE')?.valor;
-        if (lastSentDate !== todayStr) {
+        
+        // Verifica se já deu o horário e se ainda não foi enviado hoje
+        if (currentTimeStr >= scheduledTime && lastSentDate !== todayStr) {
           const todayAppointments = userClients.filter(client => {
             try {
               const appDate = client.data.includes('T') ? parseISO(client.data) : parse(client.data, 'dd/MM/yyyy HH:mm', new Date());

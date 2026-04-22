@@ -68,6 +68,7 @@ export interface VacationMode {
 export interface TelegramSettings {
   dailySummary: boolean;
   reminder2h: boolean;
+  summaryTime?: string; // Formato "HH:mm"
 }
 
 export interface CustomMessages {
@@ -93,6 +94,7 @@ export const defaultVacationMode: VacationMode = {
 export const defaultTelegramSettings: TelegramSettings = {
   dailySummary: true,
   reminder2h: true,
+  summaryTime: "08:00",
 };
 
 export const defaultCustomMessages: CustomMessages = {

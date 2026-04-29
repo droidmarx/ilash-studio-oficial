@@ -31,8 +31,17 @@ export function parseBirthday(dateStr: string | undefined): Date | null {
 
 /**
  * Gera a mensagem de lembrete personalizada para o WhatsApp
+ * @param studioAddress - Endereço do estúdio (para clientes novos)
+ * @param isNewClient - Se true, inclui o link do Google Maps
  */
-export function generateWhatsAppMessage(event: Client, customTemplate?: string, tipoOverride?: string, origin?: string) {
+export function generateWhatsAppMessage(
+  event: Client,
+  customTemplate?: string,
+  tipoOverride?: string,
+  origin?: string,
+  studioAddress?: string,
+  isNewClient?: boolean
+) {
   const getEventDate = (dataStr: string) => {
     try {
       if (dataStr.includes('T')) return parseISO(dataStr);
@@ -82,14 +91,19 @@ export function generateWhatsAppMessage(event: Client, customTemplate?: string, 
 
   const total = valorBase + valorAdicionais;
 
-  // Verifica se a anamnese está pendente
+  // Link de confirmação/assinatura da anamnese
   const isAnamneseFilled = !!event.anamnese?.assinatura;
   let anamneseLinkMsg = "";
   if (!isAnamneseFilled && origin) {
     const link = `${origin}/anamnese/${event.id}`;
-    anamneseLinkMsg = `\n\n📝 *Ficha de Anamnese Digital:*
-Notei que sua ficha ainda não foi preenchida. Para agilizar seu atendimento, por favor preencha no link abaixo:
-🔗 ${link}`;
+    anamneseLinkMsg = `\n\n📋 *Ficha de Anamnese:*\nPor favor, acesse o link abaixo para confirmar seus dados e assinar digitalmente:\n🔗 ${link}`;
+  }
+
+  // Link do Google Maps para clientes novos (primeiro agendamento)
+  let mapsLinkMsg = "";
+  if (isNewClient && studioAddress && studioAddress.trim()) {
+    const encodedAddress = encodeURIComponent(studioAddress.trim());
+    mapsLinkMsg = `\n\n📍 *Como chegar ao I Lash Studio:*\nhttps://maps.google.com/?q=${encodedAddress}`;
   }
 
   if (customTemplate) {
@@ -104,7 +118,7 @@ Notei que sua ficha ainda não foi preenchida. Para agilizar seu atendimento, po
     msg = msg.replace(/{{valor_total}}/g, total.toFixed(2).replace(".", ","));
     msg = msg.replace(/{{adicionais}}/g, msgAdicionais);
     msg = msg.replace(/{{link_anamnese}}/g, anamneseLinkMsg);
-    return msg;
+    return msg + mapsLinkMsg;
   }
 
   const message = `💖*Lembrete de agendamento*
@@ -124,7 +138,7 @@ Confira os detalhes abaixo:
 📌 Se houver necessidade de remarcar, peço que avise com no mínimo 1 dia de antecedência.
 
 Em caso de dúvidas ou imprevistos, é só me chamar! 💬
-Agradeço pela confiança 💕${anamneseLinkMsg}`;
+Agradeço pela confiança 💕${anamneseLinkMsg}${mapsLinkMsg}`;
 
   return message;
 }

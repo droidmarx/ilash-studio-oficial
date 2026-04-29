@@ -2,7 +2,7 @@
 import { useAuth } from "@/hooks/use-auth"
 
 import { useState, useEffect } from "react"
-import { Settings, Send, MessageSquare, User, Trash2, PlusCircle, Loader2, Key, Bot, XCircle, Sparkles, Clock, Palmtree, RefreshCw, Calendar, Bell, ShieldCheck, Crown, Check, MessageCircle, Type } from "lucide-react"
+import { Settings, Send, MessageSquare, User, Trash2, PlusCircle, Loader2, Key, Bot, XCircle, Sparkles, Clock, Palmtree, RefreshCw, Calendar, Bell, ShieldCheck, Crown, Check, MessageCircle, Type, MapPin } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
@@ -363,8 +363,9 @@ export function SettingsModal({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-5 bg-muted/50 p-1 rounded-2xl mb-8 overflow-x-auto">
+          <TabsList className="grid grid-cols-6 bg-muted/50 p-1 rounded-2xl mb-8 overflow-x-auto">
             <TabsTrigger value="studio" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><Crown size={16} /> <span className="hidden md:inline">Studio</span></TabsTrigger>
+            <TabsTrigger value="localizacao" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><MapPin size={16} /> <span className="hidden md:inline">Local</span></TabsTrigger>
             <TabsTrigger value="agenda" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><Calendar size={16} /> <span className="hidden md:inline">Agenda</span></TabsTrigger>
             <TabsTrigger value="robo" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><Bot size={16} /> <span className="hidden md:inline">Robô</span></TabsTrigger>
             <TabsTrigger value="mensagens" className="rounded-xl gap-1 md:gap-2 h-10 px-2"><MessageCircle size={16} /> <span className="hidden md:inline">Mensagens</span></TabsTrigger>
@@ -432,6 +433,56 @@ export function SettingsModal({
                   <Button onClick={() => { if (newTechnique.trim()) { setTechniques([...techniques, newTechnique.trim()]); setNewTechnique("") } }} size="sm" className="rounded-xl px-4">Add</Button>
                 </div>
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="localizacao" className="space-y-6 outline-none animate-in fade-in zoom-in-95 fill-mode-both duration-300">
+            <div className="space-y-4">
+              <Label className="text-sm font-bold uppercase tracking-widest text-primary/60">Endereço do Estúdio</Label>
+              <div className="bg-muted/30 p-4 rounded-2xl border border-border space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                    <MapPin className="text-primary" size={20} />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Label className="text-[10px] font-bold uppercase">Endereço Completo</Label>
+                    <Input
+                      value={perfil.studioAddress || ""}
+                      onChange={(e) => setPerfil({ ...perfil, studioAddress: e.target.value })}
+                      placeholder="Ex: Rua das Flores, 123, São Paulo - SP"
+                      className="rounded-xl bg-background"
+                    />
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      Este endereço será enviado automaticamente via WhatsApp para clientes que estão confirmando o <strong>primeiro agendamento</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                {perfil.studioAddress && perfil.studioAddress.trim() && (
+                  <div className="bg-background/60 p-3 rounded-xl border border-border space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-primary/60">Preview do Link</Label>
+                    <a
+                      href={`https://maps.google.com/?q=${encodeURIComponent(perfil.studioAddress.trim())}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-xs text-primary hover:underline break-all"
+                    >
+                      <MapPin size={12} className="shrink-0" />
+                      https://maps.google.com/?q={encodeURIComponent(perfil.studioAddress.trim())}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-2">
+              <div className="flex items-center gap-2">
+                <MapPin size={14} className="text-primary shrink-0" />
+                <p className="text-[11px] font-bold text-primary">Como funciona?</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Quando você confirmar um agendamento de uma cliente cujo WhatsApp ainda não possui outros agendamentos no sistema (cliente nova), o link do Google Maps será adicionado automaticamente ao final da mensagem de confirmação enviada pelo WhatsApp.
+              </p>
             </div>
           </TabsContent>
 

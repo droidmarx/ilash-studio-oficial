@@ -25,6 +25,7 @@ export interface Perfil {
   trial_end?: string;
   subscription_status?: string;
   custom_price?: number;
+  studioAddress?: string;
 }
 
 export interface Anamnese {
@@ -608,7 +609,7 @@ export async function updateProfile(perfil: Partial<Perfil>, userId?: string): P
   }
 
   // Removemos extras para não falhar no update do DB
-  const { id, theme, avatar_url, logo_url, ...updateData } = perfil as any;
+  const { id, theme, avatar_url, logo_url, studioAddress, ...updateData } = perfil as any;
 
   // Só faz update se houver algo para o `perfis`
   if (Object.keys(updateData).length > 0) {
@@ -624,7 +625,7 @@ export async function updateProfile(perfil: Partial<Perfil>, userId?: string): P
   }
 
   // Prepara e salva as chaves extras na tabela de configuracoes
-  const extras = { theme, avatar_url, logo_url };
+  const extras = { theme, avatar_url, logo_url, studioAddress };
   // Busca o valor atual para mesclar
   const { data: currentExtras } = await supabase
     .from('configuracoes')

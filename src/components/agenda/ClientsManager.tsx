@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from "react"
-import { Client, Anamnese, getCustomMessages } from "@/lib/api"
+import { Client, Anamnese, getCustomMessages, getProfile } from "@/lib/api"
 import { 
   Table, 
   TableBody, 
@@ -79,7 +79,31 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
     if (client.whatsapp) {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const customMsgs = await getCustomMessages();
-      const message = generateWhatsAppMessage(client, customMsgs.whatsappReminder, client.tipo, origin);
+
+      // Detecta se é cliente novo: primeiro agendamento (único registro com este whatsapp)
+      const sameWhatsapp = client.whatsapp.replace(/\D/g, "");
+      const appointmentsWithSamePhone = clients.filter(
+        c => c.whatsapp?.replace(/\D/g, "") === sameWhatsapp
+      );
+      const isNewClient = appointmentsWithSamePhone.length <= 1;
+
+      // Busca o endereço do estúdio configurado no perfil
+      let studioAddress: string | undefined;
+      try {
+        const perfil = await getProfile();
+        studioAddress = perfil?.studioAddress;
+      } catch {
+        studioAddress = undefined;
+      }
+
+      const message = generateWhatsAppMessage(
+        client,
+        customMsgs.whatsappReminder,
+        client.tipo,
+        origin,
+        studioAddress,
+        isNewClient
+      );
       const cleanPhone = client.whatsapp.replace(/\D/g, "");
       const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
       window.open(url, "_blank");

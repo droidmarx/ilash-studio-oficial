@@ -81,7 +81,7 @@ export function AnamneseModal({ client, isOpen, onClose, onSave }: AnamneseModal
     const baseUrl = window.location.origin
     const link = `${baseUrl}/anamnese/${client.id}`
     
-    const message = `Olá *${client.nome.trim()}*! ✨\n\nPara garantir sua segurança e o melhor resultado no seu procedimento, por favor preencha sua ficha de anamnese digital no link abaixo:\n\n🔗 ${link}\n\nEstamos ansiosas para ver você no *I Lash Studio*! 💖`
+    const message = `Olá *${client.nome.trim()}*! ✨\n\nSua ficha de anamnese já foi preparada pelo *I Lash Studio*. \n\nPor favor, acesse o link abaixo para *confirmar seus dados* e *assinar digitalmente*:\n\n🔗 ${link}\n\n📌 É rápido e simples! Estamos ansiosas para receber você no estúdio! 💖`
     
     const cleanPhone = client.whatsapp?.replace(/\D/g, "") || ""
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
@@ -117,7 +117,7 @@ export function AnamneseModal({ client, isOpen, onClose, onSave }: AnamneseModal
             className="rounded-full gap-2 border-primary/20 text-primary hover:bg-primary/10"
           >
             {copied ? <Check size={16} /> : <Send size={16} />}
-            <span className="hidden sm:inline">{copied ? "Link Copiado" : "Link p/ Cliente"}</span>
+            <span className="hidden sm:inline">{copied ? "Link Copiado" : "Enviar p/ Confirmar"}</span>
           </Button>
         </DialogHeader>
 

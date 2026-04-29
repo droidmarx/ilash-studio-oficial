@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Client, getCustomMessages } from "@/lib/api"
+import { Client, getCustomMessages, getProfile } from "@/lib/api"
 import { MessageSquare, Zap, RotateCw, Trash2, Star } from "lucide-react"
 import { cn, generateWhatsAppMessage } from "@/lib/utils"
 import { useState, useEffect } from "react"
@@ -31,13 +31,23 @@ export function ReminderDialog({ client, isOpen, onClose }: ReminderDialogProps)
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const customMsgs = await getCustomMessages();
     
-    // Se o toggle estiver desligado, passamos undefined para o studioAddress
+    // Busca o endereço do estúdio configurado no perfil
+    let studioAddress: string | undefined;
+    if (includeLocation) {
+      try {
+        const perfil = await getProfile();
+        studioAddress = perfil?.studioAddress;
+      } catch {
+        studioAddress = undefined;
+      }
+    }
+
     const message = generateWhatsAppMessage(
       client, 
       customMsgs.whatsappReminder, 
       tipo, 
       origin,
-      includeLocation ? undefined : "", // Gambiarra proposital: se vazio, o utils não adiciona
+      studioAddress,
       includeLocation
     );
 

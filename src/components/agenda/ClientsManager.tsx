@@ -108,7 +108,7 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
         client.tipo,
         origin,
         studioAddress,
-        isNewClient && confirmIncludeLocation // Só manda o maps se o toggle estiver ligado
+        confirmIncludeLocation // Se o toggle estiver ligado, envia (independente de ser novo ou não)
       );
       const cleanPhone = client.whatsapp.replace(/\D/g, "");
       const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;

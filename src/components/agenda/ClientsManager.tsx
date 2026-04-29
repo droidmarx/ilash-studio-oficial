@@ -77,44 +77,8 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
     }
   }
 
-  const handleConfirmBookingFinal = async (client: Client) => {
-    await onEdit(client.id, { confirmado: true });
-    
-    if (client.whatsapp) {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const customMsgs = await getCustomMessages();
-
-      // Detecta se é cliente novo: primeiro agendamento (único registro com este whatsapp)
-      const sameWhatsapp = client.whatsapp.replace(/\D/g, "");
-      const appointmentsWithSamePhone = clients.filter(
-        c => c.whatsapp?.replace(/\D/g, "") === sameWhatsapp
-      );
-      const isNewClient = appointmentsWithSamePhone.length <= 1;
-
-      // Busca o endereço do estúdio configurado no perfil
-      let studioAddress: string | undefined;
-      if (confirmIncludeLocation) {
-        try {
-          const perfil = await getProfile();
-          studioAddress = perfil?.studioAddress;
-        } catch {
-          studioAddress = undefined;
-        }
-      }
-
-      const message = generateWhatsAppMessage(
-        client,
-        customMsgs.whatsappReminder,
-        client.tipo,
-        origin,
-        studioAddress,
-        confirmIncludeLocation // Se o toggle estiver ligado, envia (independente de ser novo ou não)
-      );
-      const cleanPhone = client.whatsapp.replace(/\D/g, "");
-      const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-      window.open(url, "_blank");
-    }
-    setClientToConfirm(null);
+  const handleToggleConfirmation = async (client: Client) => {
+    await onEdit(client.id, { confirmado: !client.confirmado });
   }
 
   const handleSaveAnamnese = async (id: string, anamnese: Anamnese) => {
@@ -205,16 +169,27 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
                         <TableCell className="text-[10px] leading-tight text-foreground/40">{safeFormatDate(client.data)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1 md:gap-2">
-                            {isPending && (
+                            {isPending ? (
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => setClientToConfirm(client)}
+                                onClick={() => handleToggleConfirmation(client)}
                                 disabled={loading}
                                 className="h-8 rounded-full border-primary/40 text-primary hover:bg-primary/10 px-3 flex items-center gap-2 animate-in zoom-in duration-300"
                               >
                                 <CheckCircle2 size={14} />
                                 <span className="hidden sm:inline">Confirmar</span>
+                              </Button>
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleToggleConfirmation(client)}
+                                disabled={loading}
+                                className="h-8 rounded-full border-muted-foreground/20 text-muted-foreground hover:bg-muted/50 px-3 flex items-center gap-2"
+                              >
+                                <XCircle size={14} />
+                                <span className="hidden sm:inline">Tornar pendente</span>
                               </Button>
                             )}
                             <Button 
@@ -292,50 +267,6 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
         isOpen={!!reminderClient}
         onClose={() => setReminderClient(null)}
       />
-
-      {/* Modal de Confirmação de Agendamento */}
-      <Dialog open={!!clientToConfirm} onOpenChange={(open) => !open && setClientToConfirm(null)}>
-        <DialogContent className="w-[95vw] sm:max-w-[420px] rounded-[2.5rem] bg-card border-border p-6 md:p-8 text-foreground shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-3xl font-headline text-gold-gradient flex items-center gap-2">
-              <CheckCircle2 className="text-green-500" size={28} />
-              Confirmar?
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-[10px] uppercase tracking-[0.2em] font-black pt-2">
-              Confirmar agendamento de {clientToConfirm?.nome}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex items-center justify-between bg-primary/5 p-4 rounded-2xl border border-primary/10 mt-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="confirm-send-location" className="text-sm font-bold text-primary">Enviar Localização?</Label>
-              <p className="text-[10px] text-muted-foreground uppercase font-black opacity-50">Link do Google Maps</p>
-            </div>
-            <Switch 
-              id="confirm-send-location" 
-              checked={confirmIncludeLocation} 
-              onCheckedChange={setConfirmIncludeLocation}
-            />
-          </div>
-
-          <div className="grid gap-3 py-6">
-            <Button 
-              onClick={() => clientToConfirm && handleConfirmBookingFinal(clientToConfirm)}
-              className="h-14 rounded-2xl bg-green-500 hover:bg-green-600 text-white font-bold text-lg shadow-lg flex items-center justify-center gap-2"
-            >
-              <CheckCircle2 size={20} />
-              Sim, Confirmar!
-            </Button>
-            <Button 
-              variant="ghost" 
-              onClick={() => setClientToConfirm(null)} 
-              className="h-12 rounded-2xl text-muted-foreground font-bold hover:text-foreground"
-            >
-              Cancelar
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={!!editingClient} onOpenChange={(open) => { if (!open) { setEditingClient(null); } }}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem] bg-background border-border p-4 md:p-8 max-h-[95vh] overflow-y-auto text-foreground">

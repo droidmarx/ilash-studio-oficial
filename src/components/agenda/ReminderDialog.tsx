@@ -9,6 +9,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { Client, getCustomMessages } from "@/lib/api"
 import { MessageSquare, Zap, RotateCw, Trash2, Star } from "lucide-react"
 import { cn, generateWhatsAppMessage } from "@/lib/utils"
@@ -21,12 +23,23 @@ interface ReminderDialogProps {
 }
 
 export function ReminderDialog({ client, isOpen, onClose }: ReminderDialogProps) {
+  const [includeLocation, setIncludeLocation] = useState(true)
+  
   if (!client) return null
 
   const handleSend = async (tipo: string) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const customMsgs = await getCustomMessages();
-    const message = generateWhatsAppMessage(client, customMsgs.whatsappReminder, tipo, origin);
+    
+    // Se o toggle estiver desligado, passamos undefined para o studioAddress
+    const message = generateWhatsAppMessage(
+      client, 
+      customMsgs.whatsappReminder, 
+      tipo, 
+      origin,
+      includeLocation ? undefined : "", // Gambiarra proposital: se vazio, o utils não adiciona
+      includeLocation
+    );
 
     const cleanPhone = client.whatsapp?.replace(/\D/g, "") || "";
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
@@ -60,7 +73,19 @@ export function ReminderDialog({ client, isOpen, onClose }: ReminderDialogProps)
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-8">
+        <div className="flex items-center justify-between bg-primary/5 p-4 rounded-2xl border border-primary/10 mt-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="send-location" className="text-sm font-bold text-primary">Incluir Localização?</Label>
+            <p className="text-[10px] text-muted-foreground uppercase font-black opacity-50">Link do Google Maps</p>
+          </div>
+          <Switch 
+            id="send-location" 
+            checked={includeLocation} 
+            onCheckedChange={setIncludeLocation}
+          />
+        </div>
+
+        <div className="grid gap-3 py-6">
           {sortedTypes.map((type) => {
             const isSuggested = type.id === client.tipo;
             return (

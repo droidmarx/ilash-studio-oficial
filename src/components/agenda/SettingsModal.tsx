@@ -172,6 +172,9 @@ export function SettingsModal({
   const [testingToken, setTestingToken] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([])
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false)
+  
   const [perfil, setPerfil] = useState<Partial<Perfil>>({ nome_exibicao: "", slug: "" })
   const { toast } = useToast()
 
@@ -267,6 +270,32 @@ export function SettingsModal({
       if (e.target) e.target.value = ''
     }
   }
+
+  const handleAddressSearch = async (query: string) => {
+    setPerfil(prev => ({ ...prev, studioAddress: query }));
+    
+    if (query.length < 4) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    setIsSearchingAddress(true);
+    try {
+      // Nominatim API (OpenStreetMap) - Grátis e sem chave
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=br`);
+      const data = await res.json();
+      setAddressSuggestions(data);
+    } catch (error) {
+      console.error("Erro ao buscar endereço:", error);
+    } finally {
+      setIsSearchingAddress(false);
+    }
+  };
+
+  const handleSelectAddress = (item: any) => {
+    setPerfil(prev => ({ ...prev, studioAddress: item.display_name }));
+    setAddressSuggestions([]);
+  };
 
   const handleUpdateRecipientField = (index: number, field: 'nome' | 'chatID', value: string) => {
     const newRecipients = [...recipients]
@@ -444,14 +473,37 @@ export function SettingsModal({
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
                     <MapPin className="text-primary" size={20} />
                   </div>
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2 relative">
                     <Label className="text-[10px] font-bold uppercase">Endereço Completo</Label>
-                    <Input
-                      value={perfil.studioAddress || ""}
-                      onChange={(e) => setPerfil({ ...perfil, studioAddress: e.target.value })}
-                      placeholder="Ex: Rua das Flores, 123, São Paulo - SP"
-                      className="rounded-xl bg-background"
-                    />
+                    <div className="relative">
+                      <Input
+                        value={perfil.studioAddress || ""}
+                        onChange={(e) => handleAddressSearch(e.target.value)}
+                        placeholder="Ex: Rua das Flores, 123, São Paulo - SP"
+                        className="rounded-xl bg-background pr-10"
+                      />
+                      {isSearchingAddress && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="animate-spin text-primary" size={14} />
+                        </div>
+                      )}
+                    </div>
+
+                    {addressSuggestions.length > 0 && (
+                      <div className="absolute z-[120] left-0 right-0 top-full mt-1 bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                        {addressSuggestions.map((item, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSelectAddress(item)}
+                            className="w-full text-left px-4 py-3 text-xs hover:bg-primary/10 border-b border-border/50 last:border-0 transition-colors flex flex-col gap-0.5"
+                          >
+                            <span className="font-bold text-foreground line-clamp-1">{item.display_name.split(',')[0]}</span>
+                            <span className="text-[10px] text-muted-foreground line-clamp-1">{item.display_name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
                       Este endereço será enviado automaticamente via WhatsApp para clientes que estão confirmando o <strong>primeiro agendamento</strong>.
                     </p>

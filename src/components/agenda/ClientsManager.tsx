@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, Edit2, Trash2, User, Send, Cake, ClipboardList, Loader2, CheckCircle2, Sparkles, PlusCircle } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -46,6 +48,8 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [anamneseClient, setAnamneseClient] = useState<Client | null>(null)
   const [reminderClient, setReminderClient] = useState<Client | null>(null)
+  const [clientToConfirm, setClientToConfirm] = useState<Client | null>(null)
+  const [confirmIncludeLocation, setConfirmIncludeLocation] = useState(true)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   const filteredClients = clients.filter(client => 
@@ -73,7 +77,7 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
     }
   }
 
-  const handleConfirmBooking = async (client: Client) => {
+  const handleConfirmBookingFinal = async (client: Client) => {
     await onEdit(client.id, { confirmado: true });
     
     if (client.whatsapp) {
@@ -89,11 +93,13 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
 
       // Busca o endereço do estúdio configurado no perfil
       let studioAddress: string | undefined;
-      try {
-        const perfil = await getProfile();
-        studioAddress = perfil?.studioAddress;
-      } catch {
-        studioAddress = undefined;
+      if (confirmIncludeLocation) {
+        try {
+          const perfil = await getProfile();
+          studioAddress = perfil?.studioAddress;
+        } catch {
+          studioAddress = undefined;
+        }
       }
 
       const message = generateWhatsAppMessage(
@@ -102,12 +108,13 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
         client.tipo,
         origin,
         studioAddress,
-        isNewClient
+        isNewClient && confirmIncludeLocation // Só manda o maps se o toggle estiver ligado
       );
       const cleanPhone = client.whatsapp.replace(/\D/g, "");
       const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
       window.open(url, "_blank");
     }
+    setClientToConfirm(null);
   }
 
   const handleSaveAnamnese = async (id: string, anamnese: Anamnese) => {
@@ -202,7 +209,7 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => handleConfirmBooking(client)}
+                                onClick={() => setClientToConfirm(client)}
                                 disabled={loading}
                                 className="h-8 rounded-full border-primary/40 text-primary hover:bg-primary/10 px-3 flex items-center gap-2 animate-in zoom-in duration-300"
                               >
@@ -285,6 +292,50 @@ export function ClientsManager({ clients, loading, onEdit, onDelete, onAddNew }:
         isOpen={!!reminderClient}
         onClose={() => setReminderClient(null)}
       />
+
+      {/* Modal de Confirmação de Agendamento */}
+      <Dialog open={!!clientToConfirm} onOpenChange={(open) => !open && setClientToConfirm(null)}>
+        <DialogContent className="w-[95vw] sm:max-w-[420px] rounded-[2.5rem] bg-card border-border p-6 md:p-8 text-foreground shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-3xl font-headline text-gold-gradient flex items-center gap-2">
+              <CheckCircle2 className="text-green-500" size={28} />
+              Confirmar?
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-[10px] uppercase tracking-[0.2em] font-black pt-2">
+              Confirmar agendamento de {clientToConfirm?.nome}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between bg-primary/5 p-4 rounded-2xl border border-primary/10 mt-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="confirm-send-location" className="text-sm font-bold text-primary">Enviar Localização?</Label>
+              <p className="text-[10px] text-muted-foreground uppercase font-black opacity-50">Link do Google Maps</p>
+            </div>
+            <Switch 
+              id="confirm-send-location" 
+              checked={confirmIncludeLocation} 
+              onCheckedChange={setConfirmIncludeLocation}
+            />
+          </div>
+
+          <div className="grid gap-3 py-6">
+            <Button 
+              onClick={() => clientToConfirm && handleConfirmBookingFinal(clientToConfirm)}
+              className="h-14 rounded-2xl bg-green-500 hover:bg-green-600 text-white font-bold text-lg shadow-lg flex items-center justify-center gap-2"
+            >
+              <CheckCircle2 size={20} />
+              Sim, Confirmar!
+            </Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => setClientToConfirm(null)} 
+              className="h-12 rounded-2xl text-muted-foreground font-bold hover:text-foreground"
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!editingClient} onOpenChange={(open) => { if (!open) { setEditingClient(null); } }}>
         <DialogContent className="w-[95vw] sm:max-w-[500px] rounded-[2rem] bg-background border-border p-4 md:p-8 max-h-[95vh] overflow-y-auto text-foreground">

@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Client, Anamnese } from "@/lib/api"
 import {
   Dialog,
@@ -15,9 +14,8 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ClipboardList, Save, AlertTriangle, Send, Check, User, Camera, PenLine, Sparkles, HeartPulse, Loader2 } from "lucide-react"
+import { ClipboardList, Save, Send, Check, User, Camera, PenLine, Sparkles, HeartPulse, Loader2, Eraser } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { cn } from "@/lib/utils"
 
 interface AnamneseModalProps {
   client: Client | null
@@ -30,6 +28,8 @@ export function AnamneseModal({ client, isOpen, onClose, onSave }: AnamneseModal
   const [formData, setFormData] = useState<Anamnese>({})
   const [copied, setCopied] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -38,7 +38,22 @@ export function AnamneseModal({ client, isOpen, onClose, onSave }: AnamneseModal
     }
   }, [client, isOpen])
 
-  // Máscaras de input idênticas às do cliente
+  // Ajusta o canvas quando o modal abre / quando ainda não há assinatura
+  useEffect(() => {
+    if (!isOpen || formData.assinatura) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    // pequeno delay para o dialog montar e ter largura real
+    const t = setTimeout(() => {
+      const rect = canvas.getBoundingClientRect()
+      if (rect.width > 0) {
+        canvas.width = rect.width
+        canvas.height = rect.height
+      }
+    }, 50)
+    return () => clearTimeout(t)
+  }, [isOpen, formData.assinatura])
+
   const handleDateChange = (val: string) => {
     let v = val.replace(/\D/g, "").substring(0, 8)
     if (v.length > 4) v = v.substring(0, 2) + "/" + v.substring(2, 4) + "/" + v.substring(4)
@@ -60,6 +75,69 @@ export function AnamneseModal({ client, isOpen, onClose, onSave }: AnamneseModal
     else if (v.length > 5) v = v.substring(0, 2) + "." + v.substring(2, 5) + "." + v.substring(5)
     else if (v.length > 2) v = v.substring(0, 2) + "." + v.substring(2)
     setFormData({ ...formData, rg: v })
+  }
+
+  const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    const rect = canvas.getBoundingClientRect()
+    let clientX: number
+    let clientY: number
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX
+      clientY = e.touches[0].clientY
+    } else {
+      clientX = (e as React.MouseEvent).clientX
+      clientY = (e as React.MouseEvent).clientY
+    }
+    return { x: clientX - rect.left, y: clientY - rect.top }
+  }
+
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    const ctx = canvasRef.current?.getContext('2d')
+    if (!ctx) return
+    const { x, y } = getCoordinates(e)
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    setIsDrawing(true)
+  }
+
+  const stopDrawing = () => {
+    if (!isDrawing) return
+    setIsDrawing(false)
+    if (canvasRef.current) {
+      setFormData(prev => ({
+        ...prev,
+        assinatura: canvasRef.current!.toDataURL()
+      }))
+    }
+  }
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing || !canvasRef.current) return
+    if ('touches' in e) e.preventDefault()
+    const ctx = canvasRef.current.getContext('2d')
+    if (!ctx) return
+    const { x, y } = getCoordinates(e)
+    ctx.lineWidth = 2
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.strokeStyle = '#b76e79'
+    ctx.lineTo(x, y)
+    ctx.stroke()
+  }
+
+  const clearSignature = (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    const canvas = canvasRef.current
+    if (canvas) {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.beginPath()
+      }
+    }
+    setFormData(prev => ({ ...prev, assinatura: "" }))
   }
 
   const handleSave = async () => {
@@ -242,13 +320,51 @@ export function AnamneseModal({ client, isOpen, onClose, onSave }: AnamneseModal
               <h3 className="text-primary flex items-center gap-2 font-bold text-sm">
                 <PenLine size={18} /> Assinatura Digital
               </h3>
+
               {formData.assinatura ? (
-                <div className="border rounded-xl bg-white p-2">
-                  <img src={formData.assinatura} alt="Assinatura" className="max-h-[100px] mx-auto" />
+                <div className="space-y-2">
+                  <div className="border rounded-xl bg-white p-2 relative">
+                    <img src={formData.assinatura} alt="Assinatura" className="max-h-[100px] mx-auto" />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSignature}
+                    className="w-full rounded-xl gap-2 text-primary hover:bg-primary/10 text-xs"
+                  >
+                    <Eraser size={14} />
+                    Limpar e assinar novamente
+                  </Button>
                 </div>
               ) : (
-                <div className="border border-dashed rounded-xl h-[100px] flex items-center justify-center text-[10px] text-muted-foreground italic">
-                  Aguardando assinatura da cliente...
+                <div className="space-y-2">
+                  <div className="relative border-2 border-dashed border-primary/20 rounded-xl bg-white overflow-hidden">
+                    <canvas
+                      ref={canvasRef}
+                      onMouseDown={startDrawing}
+                      onMouseUp={stopDrawing}
+                      onMouseOut={stopDrawing}
+                      onMouseMove={draw}
+                      onTouchStart={startDrawing}
+                      onTouchEnd={stopDrawing}
+                      onTouchMove={draw}
+                      className="w-full h-[120px] cursor-crosshair touch-none"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={clearSignature}
+                      className="absolute bottom-2 right-2 text-primary hover:bg-primary/10 rounded-full h-8 w-8"
+                      title="Limpar assinatura"
+                    >
+                      <Eraser size={14} />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground italic text-center">
+                    Peça para a cliente assinar no quadro acima (mouse ou toque)
+                  </p>
                 </div>
               )}
             </div>

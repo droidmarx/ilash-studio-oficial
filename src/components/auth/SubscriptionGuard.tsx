@@ -6,39 +6,46 @@ import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
+/** Rotas públicas — não exigem login nem assinatura */
+function isPublicPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return (
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname.startsWith('/s/') ||
+    pathname === '/s' ||
+    pathname.startsWith('/anamnese/') ||
+    pathname.startsWith('/admin')
+  );
+}
+
 export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading: authLoading, impersonatedUser } = useAuth();
-  const effectiveUserId = impersonatedUser?.id || user?.id;
+  const { user, loading: authLoading } = useAuth();
+  // impersonatedUser pode não existir no AuthContext; evita quebra
+  const effectiveUserId = (user as any)?.impersonatedUser?.id || user?.id;
   const router = useRouter();
   const pathname = usePathname();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  // 0. Bypass for Admin Panel
-  if (pathname?.startsWith('/admin')) {
+  // Bypass total para rotas públicas (link de agendamento, login, anamnese, etc.)
+  if (isPublicPath(pathname)) {
     return <>{children}</>;
   }
 
   useEffect(() => {
-    // 0. Bypass for Admin Panel inside useEffect to stop redirect
-    if (pathname?.startsWith('/admin')) {
+    if (isPublicPath(pathname)) {
       return;
     }
 
     if (authLoading) return;
 
     if (!user) {
-      if (pathname !== '/login' && pathname !== '/register') {
-        router.push('/login');
-      }
+      router.push('/login');
       return;
     }
 
     const checkAccess = async () => {
-      // In a real scenario we could hit /api/subscription/status 
-      // but since we are client-side we can just query supabase directly here
-      // if RLS allows reading own profile
-      
       const { data: profile } = await supabase
         .from('perfis')
         .select('subscription_status, trial_end, role')
@@ -47,7 +54,6 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
         
       if (!profile) {
         setHasAccess(false);
-        // Se o usuário está logado mas o perfil sumiu, limpamos a sessão local
         await supabase.auth.signOut();
         router.push('/login');
         return;
@@ -69,16 +75,15 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
       
       setHasAccess(access);
 
-      if (!access && pathname !== '/subscription' && !pathname.startsWith('/admin')) {
+      if (!access && pathname !== '/subscription' && !pathname?.startsWith('/admin')) {
         router.replace('/subscription');
-      } else if (pathname.startsWith('/admin') && profile.role !== 'admin') {
-        // Protect /admin
+      } else if (pathname?.startsWith('/admin') && profile.role !== 'admin') {
         router.replace('/');
       }
     };
 
     checkAccess();
-  }, [user, authLoading, pathname, router]);
+  }, [user, authLoading, pathname, router, effectiveUserId]);
 
   if (authLoading || (user && hasAccess === null)) {
     return (
@@ -97,7 +102,7 @@ export function SubscriptionGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Se tenta acessar admin sem ser admin
-  if (pathname.startsWith('/admin') && !isAdmin) {
+  if (pathname?.startsWith('/admin') && !isAdmin) {
     return null;
   }
 
